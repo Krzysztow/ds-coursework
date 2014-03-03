@@ -2,19 +2,19 @@
 #define MEDIUMPARTICIPANT_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 class MessageReceiver {
-
+public:
+    virtual void receive(int srcAddress, uint8_t data[], int size) = 0;
 };
 
 class MediumParticipant {
 public:
     /**
-     * @brief receive - receives the message from the medium (blocking operation)
-     * @param data - data that is revceived;
-     * @return number of bytes received.
+
      */
-    virtual int registerReceiver(int mediumAddr, uint8_t data[], int maxSize) = 0;
+    virtual void registerReceiver(MessageReceiver *receiver) = 0;
 
     /**
      * @brief send sends data with broadcast to all processes;

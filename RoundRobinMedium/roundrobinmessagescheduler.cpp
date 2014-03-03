@@ -1,7 +1,6 @@
 #include "roundrobinmessagescheduler.h"
 
 #include <memory>
-#include <queue>
 #include <cstring>
 
 #include "RoundRobinMedium/roundrobinmediumparticipant.h"
@@ -60,24 +59,51 @@ struct ParticipantData {
     std::queue<MessageData*> messages;
 };
 
-RoundRobinMessageScheduler::RoundRobinMessageScheduler()
+RoundRobinMessageScheduler::RoundRobinMessageScheduler():
+    _outStandingMsgsCnt(0)
 {
+}
+
+void RoundRobinMessageScheduler::_receiveMesage(RoundRobinMediumParticipant *participant, MessageData *md)
+{
+    participant->receive(md->senderAddress(), md->data(), md->dataSize());
+    --_outStandingMsgsCnt;
 }
 
 int RoundRobinMessageScheduler::exec()
 {
     std::map<int, ParticipantData*>::iterator currentParticipantIt;
-    while (0 != _participants.size()) {
+
+    //loop until there are some messages outstanding
+    while (0 != _outStandingMsgsCnt) {
         currentParticipantIt = _participants.begin();
+
+        //pass pending messages to specific participants
         for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
             ParticipantData* pd = currentParticipantIt->second;
 
             if (0 != pd->messages.size()) {
                 MessageData *md = pd->messages.front();
                 pd->messages.pop();
-                pd->participant->receive(md->senderAddress(), md->data(), md->dataSize());
+                _receiveMesage(pd->participant, md);
                 delete md;
             }
+
+        }
+
+        //distribute broadcast message
+        if (0 != _bcastMsgs.size()) {
+            MessageData *md = _bcastMsgs.front();
+            _bcastMsgs.pop();
+
+            currentParticipantIt = _participants.begin();
+            for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
+                if (md->senderAddress() != currentParticipantIt->first) {
+                    _receiveMesage(currentParticipantIt->second->participant, md);
+                }
+            }
+
+            delete md;
         }
     }
 
@@ -109,30 +135,22 @@ int RoundRobinMessageScheduler::sendTo(int srcAddr, uint8_t data[], int size, in
 
     MessageData *md = new MessageData(srcAddr, data, size);
     pd->messages.push(md);
+    ++_outStandingMsgsCnt;
 
     return size;
 }
 
 int RoundRobinMessageScheduler::send(int srcAddr, uint8_t data[], int size)
 {
-    std::map<int, ParticipantData*>::iterator destIt = _participants.begin();
+    int msgsToSend = _participants.size();
+    //if sender is in the participants, it will not get the message
+    if (_participants.end() != _participants.find(srcAddr))
+        --msgsToSend;
 
-    if (_participants.end() == destIt)
-        return 0;
-
-    MessageData *md = new MessageData(srcAddr, data, size);
-    for (;;) {
-        ParticipantData *pd = destIt->second;
-        ++destIt;
-        if (_participants.end() == destIt) {
-            pd->messages.push(md);
-            break;
-        }
-        else {
-            pd->messages.push(new MessageData(*md));
-        }
-    };
-
-    return size;
+    if (0 != msgsToSend) {//make sure there is not only a sender registered
+        _outStandingMsgsCnt += msgsToSend;
+        _bcastMsgs.push(new MessageData(srcAddr, data, size));
+        return size;
+    }
+    return 0;
 }
-

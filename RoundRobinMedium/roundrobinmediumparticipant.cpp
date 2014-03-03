@@ -4,7 +4,8 @@
 
 RoundRobinMediumParticipant::RoundRobinMediumParticipant(int mediumAddress, RoundRobinMessageScheduler *scheduler):
     _mediumAddress(mediumAddress),
-    _scheduler(scheduler)
+    _scheduler(scheduler),
+    _receiver(0)
 {
     _scheduler->registerParticipant(this);
 }
@@ -24,8 +25,19 @@ int RoundRobinMediumParticipant::sendto(uint8_t data[], int size, int destAddr)
     return _scheduler->sendTo(_mediumAddress, data, size, destAddr);
 }
 
+void RoundRobinMediumParticipant::registerReceiver(MessageReceiver *receiver)
+{
+    _receiver = receiver;
+}
+
 
 int RoundRobinMediumParticipant::mediumAddress()
 {
     return _mediumAddress;
+}
+
+void RoundRobinMediumParticipant::receive(int srcAddr, uint8_t data[], int size)
+{
+    if (0 != _receiver)
+        _receiver->receive(srcAddr, data, size);
 }
