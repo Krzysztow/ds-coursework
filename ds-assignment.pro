@@ -6,12 +6,15 @@ CONFIG -= qt
 CONFIG -= release
 CONFIG += debug
 
-SOURCES += main.cpp \
+SOURCES += \
     RoundRobinMedium/roundrobinmessagescheduler.cpp \
-    RoundRobinMedium/roundrobinmediumparticipant.cpp
+    RoundRobinMedium/roundrobinmediumparticipant.cpp \
+    main.cpp \
+    rrschedulertester.cpp
 
 HEADERS += \
     RoundRobinMedium/roundrobinmessagescheduler.h \
     RoundRobinMedium/roundrobinmediumparticipant.h \
-    mediumparticipant.h
+    mediumparticipant.h \
+    rrschedulertester.h
 
