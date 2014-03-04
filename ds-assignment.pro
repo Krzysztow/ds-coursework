@@ -16,5 +16,7 @@ HEADERS += \
     RoundRobinMedium/roundrobinmessagescheduler.h \
     RoundRobinMedium/roundrobinmediumparticipant.h \
     mediumparticipant.h \
-    rrschedulertester.h
+    rrschedulertester.h \
+    RoundRobinMedium/mediummessage.h
 
+LIBS += -lrt

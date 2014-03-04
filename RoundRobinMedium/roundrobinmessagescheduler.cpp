@@ -1,54 +1,12 @@
 #include "roundrobinmessagescheduler.h"
 
-#include <memory>
-#include <cstring>
+#include <assert.h>
 
 #include "RoundRobinMedium/roundrobinmediumparticipant.h"
+#include "RoundRobinMedium/mediummessage.h"
 
-//smart pointers would be better
-class MessageData {
-public:
-    MessageData(int sender, uint8_t data[], int size):
-        size(size),
-        sender(sender)
-    {
-        buffer = new uint8_t[size * sizeof(data)];
-        memcpy(buffer, data, size * sizeof(data));
-        refsCnt = new int(1);
-    }
-
-    MessageData(const MessageData &other) {
-        buffer = other.buffer;
-        size = other.size;
-        refsCnt = other.refsCnt;
-        ++(*refsCnt);
-    }
-
-    ~MessageData() {
-        if (0 == --(*refsCnt) ) {
-            delete refsCnt;
-            delete []buffer;
-        }
-    }
-
-    uint8_t *data() {
-        return buffer;
-    }
-
-    int dataSize() {
-        return size;
-    }
-
-    int senderAddress() {
-        return this->sender;
-    }
-
-private:
-    int size;
-    int sender;
-
-    int *refsCnt;
-    uint8_t *buffer;
+enum {
+    RRMS_BroadcastAddress = -1
 };
 
 struct ParticipantData {
@@ -56,54 +14,60 @@ struct ParticipantData {
         participant(participant) {}
 
     RoundRobinMediumParticipant *participant;
-    std::queue<MessageData*> messages;
 };
 
-RoundRobinMessageScheduler::RoundRobinMessageScheduler():
-    _outStandingMsgsCnt(0)
+RoundRobinMessageScheduler::RoundRobinMessageScheduler()
 {
 }
 
-void RoundRobinMessageScheduler::_receiveMesage(RoundRobinMediumParticipant *participant, MessageData *md)
+void RoundRobinMessageScheduler::_receiveMesage(RoundRobinMediumParticipant *participant, MediumMessage *md)
 {
     participant->receive(md->senderAddress(), md->data(), md->dataSize());
-    --_outStandingMsgsCnt;
 }
 
 int RoundRobinMessageScheduler::exec()
 {
     std::map<int, ParticipantData*>::iterator currentParticipantIt;
 
+    bool lastLoopHadMessage = true;
     //loop until there are some messages outstanding
-    while (0 != _outStandingMsgsCnt) {
+    while (lastLoopHadMessage) {
+        lastLoopHadMessage = false;
+
         currentParticipantIt = _participants.begin();
 
         //pass pending messages to specific participants
         for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
             ParticipantData* pd = currentParticipantIt->second;
+            MediumMessage *md = pd->participant->popMessage();
 
-            if (0 != pd->messages.size()) {
-                MessageData *md = pd->messages.front();
-                pd->messages.pop();
-                _receiveMesage(pd->participant, md);
+            if (0 != md) {
+                lastLoopHadMessage = true;
+
+                if (RRMS_BroadcastAddress == md->receiverAddress()) {
+                    //dispatch to all but sender
+                    std::map<int, ParticipantData*>::iterator destPartIt = _participants.begin();
+                    for (; _participants.end() != destPartIt; ++destPartIt) {
+                        if (destPartIt == currentParticipantIt)//we don't send bcast message to ourselves
+                            continue;
+
+                        ParticipantData *pd = destPartIt->second;
+                        _receiveMesage(pd->participant, md);
+                    }
+                }
+                else {
+                    //dispatch to the given receiver
+                    std::map<int, ParticipantData*>::iterator destIt = _participants.find(md->receiverAddress());
+                    if (_participants.end() == destIt)
+                        return 0;
+
+                    ParticipantData *pd = destIt->second;
+                    _receiveMesage(pd->participant, md);
+                }
+
                 delete md;
             }
 
-        }
-
-        //distribute broadcast message
-        if (0 != _bcastMsgs.size()) {
-            MessageData *md = _bcastMsgs.front();
-            _bcastMsgs.pop();
-
-            currentParticipantIt = _participants.begin();
-            for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
-                if (md->senderAddress() != currentParticipantIt->first) {
-                    _receiveMesage(currentParticipantIt->second->participant, md);
-                }
-            }
-
-            delete md;
         }
     }
 
@@ -112,6 +76,11 @@ int RoundRobinMessageScheduler::exec()
 
 bool RoundRobinMessageScheduler::registerParticipant(RoundRobinMediumParticipant *participant)
 {
+    //dont register for bcast address
+    if (RRMS_BroadcastAddress == participant->mediumAddress())
+        return false;
+
+    //is the address already assigned?
     if (0 != _participants.count(participant->mediumAddress()))
         return false;
 
@@ -125,32 +94,58 @@ bool RoundRobinMessageScheduler::deregisterParticipant(RoundRobinMediumParticipa
     return (1 == _participants.erase(participant->mediumAddress()));
 }
 
-int RoundRobinMessageScheduler::sendTo(int srcAddr, uint8_t data[], int size, int destAddr)
+bool RoundRobinMessageScheduler::isParticipantReachable(int address)
 {
-    std::map<int, ParticipantData*>::iterator destIt = _participants.find(destAddr);
-    if (_participants.end() == destIt)
-        return 0;
+    return (0 != _participants.count(address));
+}
 
-    ParticipantData *pd = destIt->second;
+bool RoundRobinMessageScheduler::containsParticipant(int address)
+{
+    return (0 != _participants.count(address));
+}
 
-    MessageData *md = new MessageData(srcAddr, data, size);
-    pd->messages.push(md);
-    ++_outStandingMsgsCnt;
+bool RoundRobinMessageScheduler::isBcastAddress(int address)
+{
+    return (RRMS_BroadcastAddress == address);
+}
+
+int RoundRobinMessageScheduler::bcastAddress()
+{
+    return RRMS_BroadcastAddress;
+}
+
+int RoundRobinMessageScheduler::_send(int srcAddr, uint8_t data[], int size, int destAddr)
+{
+    //just make sure there is such a destination participant (or broadcast)
+    if (RRMS_BroadcastAddress != destAddr) {
+        std::map<int, ParticipantData*>::iterator destIt = _participants.find(destAddr);
+        if (_participants.end() == destIt)//no destination - so there would be no connection, fail
+            return -2;
+    }
+
+    //is sender registered with medium?
+    std::map<int, ParticipantData*>::iterator srcIt = _participants.find(srcAddr);
+    if (_participants.end() == srcIt)
+        return -3;
+
+    ParticipantData *pd = srcIt->second;
+
+    MediumMessage *md = new MediumMessage(srcAddr, destAddr, data, size);
+    pd->participant->_messages.push(md);
 
     return size;
 }
 
+int RoundRobinMessageScheduler::sendTo(int srcAddr, uint8_t data[], int size, int destAddr)
+{
+    assert(RRMS_BroadcastAddress != destAddr);
+    if (RRMS_BroadcastAddress == destAddr)//for broadcasts use send() method
+        return -1;
+
+    return _send(srcAddr, data, size, destAddr);
+}
+
 int RoundRobinMessageScheduler::send(int srcAddr, uint8_t data[], int size)
 {
-    int msgsToSend = _participants.size();
-    //if sender is in the participants, it will not get the message
-    if (_participants.end() != _participants.find(srcAddr))
-        --msgsToSend;
-
-    if (0 != msgsToSend) {//make sure there is not only a sender registered
-        _outStandingMsgsCnt += msgsToSend;
-        _bcastMsgs.push(new MessageData(srcAddr, data, size));
-        return size;
-    }
-    return 0;
+    return _send(srcAddr, data, size, RRMS_BroadcastAddress);
 }

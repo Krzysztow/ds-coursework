@@ -31,7 +31,7 @@ public:
      * @param destAddr - identifier of destination process;
      * @return number of bytes sent.
      */
-    virtual int sendto(uint8_t data[], int size, int destAddr) = 0;\
+    virtual int sendTo(uint8_t data[], int size, int destAddr) = 0;\
 
     virtual ~MediumParticipant() {}
 };

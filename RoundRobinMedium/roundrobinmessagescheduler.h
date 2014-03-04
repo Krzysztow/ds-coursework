@@ -7,7 +7,7 @@
 
 class RoundRobinMediumParticipant;
 class ParticipantData;
-class MessageData;
+class MediumMessage;
 
 class RoundRobinMessageScheduler
 {
@@ -21,24 +21,40 @@ public:
      */
     int exec();
 
-protected:
-    //de/registration functions should be called out of exec()
-    //thewise messages counter gets lost (and it's not in a scope of the project to correct it).
     bool registerParticipant(RoundRobinMediumParticipant *participant);
     bool deregisterParticipant(RoundRobinMediumParticipant *participant);
 
+    bool isParticipantReachable(int address);
+    bool containsParticipant(int address);
+    bool isBcastAddress(int address);
+    int bcastAddress();
+
     //transmission methods
+    /**
+     * @brief sendTo direct transmission
+     * @param srcAddr
+     * @param data
+     * @param size
+     * @param destAddr
+     * @return
+     */
     int sendTo(int srcAddr, uint8_t data[], int size, int destAddr);
+    /**
+     * @brief send broadcast transmission
+     * @param srcAddr
+     * @param data
+     * @param size
+     * @return
+     */
     int send(int srcAddr, uint8_t data[], int size);
 
     friend class RoundRobinMediumParticipant;
 
 private:
     std::map<int, ParticipantData*> _participants;
-    std::queue<MessageData*> _bcastMsgs;
 
-    int _outStandingMsgsCnt;
-    void _receiveMesage(RoundRobinMediumParticipant *participant, MessageData *md);
+    void _receiveMesage(RoundRobinMediumParticipant *participant, MediumMessage *md);
+    int _send(int srcAddr, uint8_t data[], int size, int destAddr);
 };
 
 #endif // ROUNDROBINMESSAGESCHEDULER_H

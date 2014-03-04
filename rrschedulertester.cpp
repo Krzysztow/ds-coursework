@@ -5,20 +5,22 @@
 #include <iostream>
 #include <map>
 #include <stdio.h>
-
-using namespace std;
+#include <time.h>
 
 #include "RoundRobinMedium/roundrobinmediumparticipant.h"
 #include "RoundRobinMedium/roundrobinmessagescheduler.h"
+
+using namespace std;
 
 static int totalNumOfParticipants = 0;
 
 class TestParticipant:
         MessageReceiver {
 public:
-    TestParticipant(int address, RoundRobinMessageScheduler *scheduler):
+    TestParticipant(int address, RoundRobinMessageScheduler *scheduler, int *totalCntrPtr):
         _mediumParticipant(new RoundRobinMediumParticipant(address, scheduler)),
-        _thisTxLeft(5)
+        _thisTxLeft(5),
+        _totalMessagesPtr(totalCntrPtr)
     {
         _mediumParticipant->registerReceiver(this);
     }
@@ -27,19 +29,19 @@ public:
         if (_thisTxLeft <= 0)
             return;
 
-        int r = rand() % 4;
+        int r = rand() % 3;
         for (int i = 0; i < r; ++i) {
             uint8_t data[64];
             int destAddr = rand() % (totalNumOfParticipants + 1) - 1;
             int dataSize = sprintf((char*)data, "SEND: from %d to %d", _mediumParticipant->mediumAddress(), destAddr);
             std::cout << data << std::endl;
             if (destAddr >=0) {
-                _mediumParticipant->sendto(data, dataSize, destAddr);
-                ++_totalMessages;
+                _mediumParticipant->sendTo(data, dataSize, destAddr);
+                ++(*_totalMessagesPtr);
             }
             else {
                 _mediumParticipant->send(data, dataSize);
-                _totalMessages += (totalNumOfParticipants - 1);//don't send to itself
+                *_totalMessagesPtr += (totalNumOfParticipants - 1);//don't send to itself
             }
 
             --_thisTxLeft;
@@ -53,28 +55,32 @@ public:
     virtual void receive(int srcAddress, uint8_t data[], int size) {
         assert(strlen((char*)data) == size);
         std::cout << "RCVD: " <<  data <<  "from " << srcAddress << std::endl;
-        --_totalMessages;
+        --(*_totalMessagesPtr);
 
         sendSomeMessages();
     }
 
-    static int _totalMessages;
 private:
     RoundRobinMediumParticipant *_mediumParticipant;
     int _thisTxLeft;
+    int * const _totalMessagesPtr;
 };
 
-int TestParticipant::_totalMessages = 0;
 
 int RRSchedulerTester::test()
 {
-    const int NoOfParticipants = 3;
+    const int NoOfParticipants = 4;
     totalNumOfParticipants = NoOfParticipants;
     std::map<int, TestParticipant*> participants;
+    int totalMsgs = 0;
+
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    srand(t.tv_nsec + t.tv_sec);
 
     RoundRobinMessageScheduler scheduler;
     for (int i = 0; i < NoOfParticipants; ++i) {
-        TestParticipant *tp = new TestParticipant(i, &scheduler);
+        TestParticipant *tp = new TestParticipant(i, &scheduler, &totalMsgs);
         participants[i] = tp;
     }
 
@@ -83,9 +89,7 @@ int RRSchedulerTester::test()
 
     scheduler.exec();
 
-    TestParticipant *tp = participants[0];
-    int left = tp->_totalMessages;
-    assert(left == 0);
+    assert(totalMsgs == 0);
     for (int i = 0; i < NoOfParticipants; ++i) {
         delete participants[i];
     }
