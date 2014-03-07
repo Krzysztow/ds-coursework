@@ -1,11 +1,11 @@
-#include "roundrobinmediumparticipant.h"
+#include "mediumparticipantimpl.h"
 
 #include <assert.h>
 
 #include "RoundRobinMedium/mediummessage.h"
-#include "RoundRobinMedium/roundrobinmessagescheduler.h"
+#include "RoundRobinMedium/mediumdispatcher.h"
 
-RoundRobinMediumParticipant::RoundRobinMediumParticipant(int mediumAddress, RoundRobinMessageScheduler *scheduler):
+MediumParticipantImpl::MediumParticipantImpl(int mediumAddress, MediumDispatcher *scheduler):
     _mediumAddress(mediumAddress),
     _scheduler(scheduler),
     _receiver(0)
@@ -13,12 +13,12 @@ RoundRobinMediumParticipant::RoundRobinMediumParticipant(int mediumAddress, Roun
     _scheduler->registerParticipant(this);
 }
 
-RoundRobinMediumParticipant::~RoundRobinMediumParticipant()
+MediumParticipantImpl::~MediumParticipantImpl()
 {
     _scheduler->deregisterParticipant(this);
 }
 
-int RoundRobinMediumParticipant::_send(uint8_t data[], int size, int destAddr)
+int MediumParticipantImpl::_send(uint8_t data[], int size, int destAddr)
 {
     //just make sure there is such a destination participant (or broadcast)
     if (!_scheduler->isBcastAddress(destAddr)) {
@@ -37,7 +37,7 @@ int RoundRobinMediumParticipant::_send(uint8_t data[], int size, int destAddr)
     return size;
 }
 
-int RoundRobinMediumParticipant::sendTo(uint8_t data[], int size, int destAddr)
+int MediumParticipantImpl::sendTo(uint8_t data[], int size, int destAddr)
 {
     assert(!_scheduler->isBcastAddress(destAddr));
     if (_scheduler->isBcastAddress(destAddr))//for broadcasts use send() method
@@ -46,17 +46,17 @@ int RoundRobinMediumParticipant::sendTo(uint8_t data[], int size, int destAddr)
     return _send(data, size, destAddr);
 }
 
-int RoundRobinMediumParticipant::send(uint8_t data[], int size)
+int MediumParticipantImpl::send(uint8_t data[], int size)
 {
     return _send(data, size, _scheduler->bcastAddress());
 }
 
-void RoundRobinMediumParticipant::registerReceiver(MessageReceiver *receiver)
+void MediumParticipantImpl::registerReceiver(MessageReceiver *receiver)
 {
     _receiver = receiver;
 }
 
-MediumMessage *RoundRobinMediumParticipant::popMessage()
+MediumMessage *MediumParticipantImpl::popMessage()
 {
     if (0 == _messages.size())
         return 0;
@@ -65,12 +65,12 @@ MediumMessage *RoundRobinMediumParticipant::popMessage()
     return mm;
 }
 
-int RoundRobinMediumParticipant::mediumAddress()
+int MediumParticipantImpl::mediumAddress()
 {
     return _mediumAddress;
 }
 
-void RoundRobinMediumParticipant::receive(int srcAddr, uint8_t data[], int size)
+void MediumParticipantImpl::receive(int srcAddr, uint8_t data[], int size)
 {
     if (0 != _receiver)
         _receiver->receive(srcAddr, data, size);

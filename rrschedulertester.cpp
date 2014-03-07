@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "RoundRobinMedium/roundrobinmediumparticipant.h"
-#include "RoundRobinMedium/roundrobinmessagescheduler.h"
+#include "RoundRobinMedium/roundrobinmediumdispatcher.h"
+#include "RoundRobinMedium/mediumparticipantimpl.h"
+#include "mediumparticipant.h"
 
 using namespace std;
 
@@ -17,8 +18,8 @@ static int totalNumOfParticipants = 0;
 class TestParticipant:
         MessageReceiver {
 public:
-    TestParticipant(int address, RoundRobinMessageScheduler *scheduler, int *totalCntrPtr):
-        _mediumParticipant(new RoundRobinMediumParticipant(address, scheduler)),
+    TestParticipant(int address, RoundRobinMediumDispatcher *scheduler, int *totalCntrPtr):
+        _mediumParticipant(new MediumParticipantImpl(address, scheduler)),
         _thisTxLeft(5),
         _totalMessagesPtr(totalCntrPtr)
     {
@@ -61,7 +62,7 @@ public:
     }
 
 private:
-    RoundRobinMediumParticipant *_mediumParticipant;
+    MediumParticipantImpl *_mediumParticipant;
     int _thisTxLeft;
     int * const _totalMessagesPtr;
 };
@@ -78,7 +79,7 @@ int RRSchedulerTester::test()
     clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     srand(t.tv_nsec + t.tv_sec);
 
-    RoundRobinMessageScheduler scheduler;
+    RoundRobinMediumDispatcher scheduler;
     for (int i = 0; i < NoOfParticipants; ++i) {
         TestParticipant *tp = new TestParticipant(i, &scheduler, &totalMsgs);
         participants[i] = tp;

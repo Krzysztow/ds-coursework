@@ -7,16 +7,18 @@ CONFIG -= release
 CONFIG += debug
 
 SOURCES += \
-    RoundRobinMedium/roundrobinmessagescheduler.cpp \
-    RoundRobinMedium/roundrobinmediumparticipant.cpp \
     main.cpp \
-    rrschedulertester.cpp
+    rrschedulertester.cpp \
+    RoundRobinMedium/roundrobinmediumdispatcher.cpp \
+    RoundRobinMedium/mediumdispatcher.cpp \
+    RoundRobinMedium/mediumparticipantimpl.cpp
 
 HEADERS += \
-    RoundRobinMedium/roundrobinmessagescheduler.h \
-    RoundRobinMedium/roundrobinmediumparticipant.h \
     mediumparticipant.h \
     rrschedulertester.h \
-    RoundRobinMedium/mediummessage.h
+    RoundRobinMedium/mediummessage.h \
+    RoundRobinMedium/roundrobinmediumdispatcher.h \
+    RoundRobinMedium/mediumdispatcher.h \
+    RoundRobinMedium/mediumparticipantimpl.h
 
 LIBS += -lrt

@@ -1,19 +1,19 @@
-#ifndef ROUNDROBINMEDIUMPARTICIPANT_H
-#define ROUNDROBINMEDIUMPARTICIPANT_H
+#ifndef MEDIUMPARTICIPANTIMPL_H
+#define MEDIUMPARTICIPANTIMPL_H
 
 #include <queue>
 
 #include "mediumparticipant.h"
 
 class MediumMessage;
-class RoundRobinMessageScheduler;
+class MediumDispatcher;
 
-class RoundRobinMediumParticipant:
+class MediumParticipantImpl:
         public MediumParticipant
 {
 public:
-    RoundRobinMediumParticipant(int mediumAddress, RoundRobinMessageScheduler *scheduler);
-    virtual ~RoundRobinMediumParticipant();
+    MediumParticipantImpl(int mediumAddress, MediumDispatcher *scheduler);
+    virtual ~MediumParticipantImpl();
 
 public:
     virtual int send(uint8_t data[], int size);
@@ -35,17 +35,17 @@ private:
      */
     void receive(int srcAddr, uint8_t data[], int size);
 
-    friend class RoundRobinMessageScheduler;
+    friend class RoundRobinMediumDispatcher;
 
 private:
     int _send(uint8_t data[], int size, int destAddr);
 
 private:
     int _mediumAddress;
-    RoundRobinMessageScheduler *_scheduler;
+    MediumDispatcher *_scheduler;
     MessageReceiver *_receiver;
 
     std::queue<MediumMessage*> _messages;
 };
 
-#endif // ROUNDROBINMEDIUMPARTICIPANT_H
+#endif // MEDIUMPARTICIPANTIMPL_H
