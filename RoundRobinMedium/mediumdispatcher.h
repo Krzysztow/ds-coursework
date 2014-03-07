@@ -7,12 +7,17 @@ class MediumParticipantImpl;
 
 class MediumDispatcher {
 public:
+    enum DispatchedMessagesResult {
+        MD_NotDone,
+        MD_NoMoreMessages
+    };
+
     /**
      * @brief loop start communication loop when all participants are registerd.
      * Loop is exited once all participants deregistered from it.
      * @return 0 on success (always?).
      */
-    virtual int exec() = 0;
+    virtual DispatchedMessagesResult dispatchMessages() = 0;
 
     //transmission methods
     /**

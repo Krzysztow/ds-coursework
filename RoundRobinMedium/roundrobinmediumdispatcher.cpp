@@ -21,53 +21,47 @@ void RoundRobinMediumDispatcher::_receiveMesage(MediumParticipantImpl *participa
     participant->receive(md->senderAddress(), md->data(), md->dataSize());
 }
 
-int RoundRobinMediumDispatcher::exec()
+MediumDispatcher::DispatchedMessagesResult RoundRobinMediumDispatcher::dispatchMessages()
 {
     std::map<int, ParticipantData*>::iterator currentParticipantIt;
 
-    bool lastLoopHadMessage = true;
-    //loop until there are some messages outstanding
-    while (lastLoopHadMessage) {
-        lastLoopHadMessage = false;
+    currentParticipantIt = _participants.begin();
 
-        currentParticipantIt = _participants.begin();
+    bool moreMessagesToSend = false;
 
-        //pass pending messages to specific participants
-        for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
-            ParticipantData* pd = currentParticipantIt->second;
-            MediumMessage *md = pd->participant->popMessage();
+    //pass pending messages to specific participants
+    for (; _participants.end() != currentParticipantIt; ++currentParticipantIt) {
+        ParticipantData* pd = currentParticipantIt->second;
+        MediumMessage *md = pd->participant->popMessage();
 
-            if (0 != md) {
-                lastLoopHadMessage = true;
+        if (0 != md) {
+            moreMessagesToSend = true;
+            if (MD_BroadcastAddress == md->receiverAddress()) {
+                //dispatch to all but sender
+                std::map<int, ParticipantData*>::iterator destPartIt = _participants.begin();
+                for (; _participants.end() != destPartIt; ++destPartIt) {
+                    if (destPartIt == currentParticipantIt)//we don't send bcast message to ourselves
+                        continue;
 
-                if (MD_BroadcastAddress == md->receiverAddress()) {
-                    //dispatch to all but sender
-                    std::map<int, ParticipantData*>::iterator destPartIt = _participants.begin();
-                    for (; _participants.end() != destPartIt; ++destPartIt) {
-                        if (destPartIt == currentParticipantIt)//we don't send bcast message to ourselves
-                            continue;
-
-                        ParticipantData *pd = destPartIt->second;
-                        _receiveMesage(pd->participant, md);
-                    }
-                }
-                else {
-                    //dispatch to the given receiver
-                    std::map<int, ParticipantData*>::iterator destIt = _participants.find(md->receiverAddress());
-                    if (_participants.end() == destIt)
-                        return 0;
-
-                    ParticipantData *pd = destIt->second;
+                    ParticipantData *pd = destPartIt->second;
                     _receiveMesage(pd->participant, md);
                 }
+            }
+            else {
+                //dispatch to the given receiver
+                std::map<int, ParticipantData*>::iterator destIt = _participants.find(md->receiverAddress());
+                if (_participants.end() == destIt)
+                    continue;
 
-                delete md;
+                ParticipantData *pd = destIt->second;
+                _receiveMesage(pd->participant, md);
             }
 
+            delete md;
         }
     }
 
-    return 0;
+    return (moreMessagesToSend ? MD_NotDone : MD_NoMoreMessages);
 }
 
 bool RoundRobinMediumDispatcher::registerParticipant(MediumParticipantImpl *participant)

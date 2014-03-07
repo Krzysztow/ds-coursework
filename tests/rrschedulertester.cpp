@@ -1,4 +1,4 @@
-#include "RoundRobinMedium/rrschedulertester.h"
+#include "tests/rrschedulertester.h"
 
 #include <assert.h>
 #include <cstring>
@@ -10,13 +10,16 @@
 #include "RoundRobinMedium/roundrobinmediumdispatcher.h"
 #include "RoundRobinMedium/mediumparticipantimpl.h"
 #include "mediumparticipant.h"
+#include "scheduledobject.h"
 
 using namespace std;
 
 static int totalNumOfParticipants = 0;
 
 class TestParticipant:
-        MessageReceiver {
+        public MessageReceiver,
+        public ScheduledObject
+{
 public:
     TestParticipant(int address, RoundRobinMediumDispatcher *scheduler, int *totalCntrPtr):
         _mediumParticipant(new MediumParticipantImpl(address, scheduler)),
@@ -24,6 +27,7 @@ public:
         _totalMessagesPtr(totalCntrPtr)
     {
         _mediumParticipant->registerReceiver(this);
+        scheduler->registerParticipant(_mediumParticipant);
     }
 
     void sendSomeMessages() {
@@ -53,12 +57,15 @@ public:
         sendSomeMessages();
     }
 
+    virtual StepResult execStep() {
+        sendSomeMessages();
+        return (_thisTxLeft > 0 ? ScheduledObject::NotFinished : ScheduledObject::MayFinish);
+    }
+
     virtual void receive(int srcAddress, uint8_t data[], int size) {
         assert(strlen((char*)data) == size);
         std::cout << "RCVD: " <<  data <<  "from " << srcAddress << std::endl;
         --(*_totalMessagesPtr);
-
-        sendSomeMessages();
     }
 
 private:
@@ -67,6 +74,8 @@ private:
     int * const _totalMessagesPtr;
 };
 
+#include "scheduledmediumdispatcher.h"
+#include "roundrobinscheduler.h"
 
 int RRSchedulerTester::test()
 {
@@ -79,16 +88,21 @@ int RRSchedulerTester::test()
     clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     srand(t.tv_nsec + t.tv_sec);
 
-    RoundRobinMediumDispatcher scheduler;
+
+    RoundRobinScheduler sched;
+    RoundRobinMediumDispatcher disp;
+    ScheduledMediumDispatcher dispatcher(&disp);
+    sched.registerObject(&dispatcher);
     for (int i = 0; i < NoOfParticipants; ++i) {
-        TestParticipant *tp = new TestParticipant(i, &scheduler, &totalMsgs);
+        TestParticipant *tp = new TestParticipant(i, &disp, &totalMsgs);
         participants[i] = tp;
+        sched.registerObject(tp);
     }
 
     int startingParticipant = rand() % NoOfParticipants;
     participants[startingParticipant]->act();
 
-    scheduler.exec();
+    sched.exec();
 
     assert(totalMsgs == 0);
     for (int i = 0; i < NoOfParticipants; ++i) {

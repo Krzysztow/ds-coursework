@@ -8,17 +8,25 @@ CONFIG += debug
 
 SOURCES += \
     main.cpp \
-    rrschedulertester.cpp \
+    tests/rrschedulertester.cpp \
     RoundRobinMedium/roundrobinmediumdispatcher.cpp \
     RoundRobinMedium/mediumdispatcher.cpp \
-    RoundRobinMedium/mediumparticipantimpl.cpp
+    RoundRobinMedium/mediumparticipantimpl.cpp \
+    roundrobinscheduler.cpp \
+    processobject.cpp \
+    scheduledmediumdispatcher.cpp
 
 HEADERS += \
     mediumparticipant.h \
-    rrschedulertester.h \
+    tests/rrschedulertester.h \
     RoundRobinMedium/mediummessage.h \
     RoundRobinMedium/roundrobinmediumdispatcher.h \
     RoundRobinMedium/mediumdispatcher.h \
-    RoundRobinMedium/mediumparticipantimpl.h
+    RoundRobinMedium/mediumparticipantimpl.h \
+    scheduler.h \
+    scheduledobject.h \
+    roundrobinscheduler.h \
+    processobject.h \
+    scheduledmediumdispatcher.h
 
 LIBS += -lrt

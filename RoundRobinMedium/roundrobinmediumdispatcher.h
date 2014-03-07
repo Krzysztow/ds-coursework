@@ -18,11 +18,10 @@ public:
     RoundRobinMediumDispatcher();
 
     /**
-     * @brief loop start communication loop when all participants are registerd.
-     * Loop is exited once all participants deregistered from it.
-     * @return 0 on success (always?).
+     * @brief runs message dispatching over all praticipants, once.
+     * @return 0 if there are yet messages to be dispatched.
      */
-    virtual int exec();
+    virtual DispatchedMessagesResult dispatchMessages();
 
     //transmission methods
     /**

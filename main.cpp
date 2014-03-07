@@ -1,4 +1,4 @@
-#include "RoundRobinMedium/rrschedulertester.h"
+#include "tests/rrschedulertester.h"
 
 int main(int argc, const char *argv[]) {
     RRSchedulerTester tester;
