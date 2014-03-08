@@ -5,6 +5,8 @@
 #include "scheduledobject.h"
 
 class MediumParticipant;
+class LamportClockHandler;
+
 class ProcessObject:
         public ScheduledObject,
         public MessageReceiver
@@ -18,6 +20,7 @@ public://inherited from MessageReceiver
 
 private:
     MediumParticipant *_medAccess;
+    LamportClockHandler *_clock;
 };
 
 #endif // PROCESSOBJECT_H

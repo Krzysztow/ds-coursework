@@ -14,7 +14,11 @@ SOURCES += \
     RoundRobinMedium/mediumparticipantimpl.cpp \
     roundrobinscheduler.cpp \
     processobject.cpp \
-    scheduledmediumdispatcher.cpp
+    scheduledmediumdispatcher.cpp \
+    lamportclockhandler.cpp \
+    datafilereader.cpp \
+    opertions.cpp \
+    tests/operationstester.cpp
 
 HEADERS += \
     mediumparticipant.h \
@@ -27,6 +31,10 @@ HEADERS += \
     scheduledobject.h \
     roundrobinscheduler.h \
     processobject.h \
-    scheduledmediumdispatcher.h
+    scheduledmediumdispatcher.h \
+    lamportclockhandler.h \
+    datafilereader.h \
+    opertions.h \
+    tests/operationstester.h
 
 LIBS += -lrt
