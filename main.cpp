@@ -9,7 +9,7 @@
 #include "scheduledmediumdispatcher.h"
 #include "RoundRobinMedium/roundrobinmediumdispatcher.h"
 #include "processobject.h"
-#include "mediumparticipant.h"
+#include "mediumparticipantimpl.h"
 
 int main(int argc, const char *argv[]) {
     RRSchedulerTester tester;
@@ -40,11 +40,16 @@ int main(int argc, const char *argv[]) {
         MultiProcessesOperations mProcsOptions = ops.operations();
         MultiProcessesOperations::const_iterator mProcsIt = mProcsOptions.begin();
         for (; mProcsOptions.end() != mProcsIt; ++ mProcsIt) {
+            MediumParticipantImpl *medParticipant = new MediumParticipantImpl(mProcsIt->first, &rrDispatcher);
+            ProcessObject *process = new ProcessObject(medParticipant);
+            process->setOperations(&(mProcsIt->second));
 
-//            ProcessObject *proces = new ProcessObject()
+            rrDispatcher.registerParticipant(medParticipant);
+            scheduler.registerObject(process);
         }
 
-
+        scheduler.exec();
+        //could make clean-up
     }
     else {
         std::cerr << "Cannot parse the file " << fileName;

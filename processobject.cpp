@@ -8,7 +8,13 @@ ProcessObject::ProcessObject(MediumParticipant *mediumParticipant):
     _medAccess(mediumParticipant),
     _clock(new LamportClockHandler())
 {
-   _medAccess->registerReceiver(this);
+    _medAccess->registerReceiver(this);
+}
+
+void ProcessObject::setOperations(const std::list<Operation *> *operations)
+{
+    _operations = operations;
+    _operIt = _operations->begin();
 }
 
 ScheduledObject::StepResult ProcessObject::execStep()
