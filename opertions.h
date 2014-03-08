@@ -6,6 +6,9 @@
 
 class Operation;
 
+typedef std::list<Operation *> ProcessOperations;
+typedef std::map<unsigned int, ProcessOperations> MultiProcessesOperations;
+
 class Operations {
 public:
     Operations();
@@ -14,10 +17,10 @@ public:
     /**
      *pass ownership of operations. When deleted, operations will be destroyed as well.
      */
-    void setOperations(std::map<unsigned int, std::list<Operation *> > *operations);
-    const std::map<unsigned int, std::list<Operation *> > &operations();
+    void setOperations(MultiProcessesOperations *operations);
+    const MultiProcessesOperations &operations();
 
-    static void destroyOperations(std::map<unsigned int, std::list<Operation *> > *operations);
+    static void destroyOperations(MultiProcessesOperations *operations);
 
 private:
     //don't define -> prevent from copying

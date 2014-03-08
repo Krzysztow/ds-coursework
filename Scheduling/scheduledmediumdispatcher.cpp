@@ -1,6 +1,6 @@
 #include "scheduledmediumdispatcher.h"
 
-#include "RoundRobinMedium/mediumdispatcher.h"
+#include "mediumdispatcher.h"
 
 ScheduledMediumDispatcher::ScheduledMediumDispatcher(MediumDispatcher *medDispatcher):
     _medDispatcher(medDispatcher)

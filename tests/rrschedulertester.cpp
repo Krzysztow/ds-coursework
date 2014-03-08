@@ -8,7 +8,7 @@
 #include <time.h>
 
 #include "RoundRobinMedium/roundrobinmediumdispatcher.h"
-#include "RoundRobinMedium/mediumparticipantimpl.h"
+#include "mediumparticipantimpl.h"
 #include "mediumparticipant.h"
 #include "scheduledobject.h"
 
@@ -75,7 +75,7 @@ private:
 };
 
 #include "scheduledmediumdispatcher.h"
-#include "roundrobinscheduler.h"
+#include "RoundRobinScheduler/roundrobinscheduler.h"
 
 int RRSchedulerTester::test()
 {

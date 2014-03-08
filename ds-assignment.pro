@@ -6,15 +6,18 @@ CONFIG -= qt
 CONFIG -= release
 CONFIG += debug
 
+INCLUDEPATH += ./CommMedium \
+    ./Scheduling
+
 SOURCES += \
     main.cpp \
     tests/rrschedulertester.cpp \
-    RoundRobinMedium/roundrobinmediumdispatcher.cpp \
-    RoundRobinMedium/mediumdispatcher.cpp \
-    RoundRobinMedium/mediumparticipantimpl.cpp \
-    roundrobinscheduler.cpp \
+    CommMedium/RoundRobinMedium/roundrobinmediumdispatcher.cpp \
+    CommMedium/mediumdispatcher.cpp \
+    CommMedium/mediumparticipantimpl.cpp \
+    Scheduling/RoundRobinScheduler/roundrobinscheduler.cpp \
     processobject.cpp \
-    scheduledmediumdispatcher.cpp \
+    Scheduling/scheduledmediumdispatcher.cpp \
     lamportclockhandler.cpp \
     datafilereader.cpp \
     opertions.cpp \
@@ -23,15 +26,15 @@ SOURCES += \
 HEADERS += \
     mediumparticipant.h \
     tests/rrschedulertester.h \
-    RoundRobinMedium/mediummessage.h \
-    RoundRobinMedium/roundrobinmediumdispatcher.h \
-    RoundRobinMedium/mediumdispatcher.h \
-    RoundRobinMedium/mediumparticipantimpl.h \
-    scheduler.h \
-    scheduledobject.h \
-    roundrobinscheduler.h \
+    CommMedium/mediummessage.h \
+    CommMedium/RoundRobinMedium/roundrobinmediumdispatcher.h \
+    CommMedium/mediumdispatcher.h \
+    CommMedium/mediumparticipantimpl.h \
+    Scheduling/scheduler.h \
+    Scheduling/scheduledobject.h \
+    Scheduling/RoundRobinScheduler/roundrobinscheduler.h \
     processobject.h \
-    scheduledmediumdispatcher.h \
+    Scheduling/scheduledmediumdispatcher.h \
     lamportclockhandler.h \
     datafilereader.h \
     opertions.h \

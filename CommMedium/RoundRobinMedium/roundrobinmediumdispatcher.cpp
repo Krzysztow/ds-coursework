@@ -2,8 +2,8 @@
 
 #include <assert.h>
 
-#include "RoundRobinMedium/mediumparticipantimpl.h"
-#include "RoundRobinMedium/mediummessage.h"
+#include "mediumparticipantimpl.h"
+#include "mediummessage.h"
 
 struct ParticipantData {
     ParticipantData(MediumParticipantImpl *participant):

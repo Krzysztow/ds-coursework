@@ -6,7 +6,7 @@ Operations::Operations()
 {
 }
 
-void Operations::destroyOperations(std::map<unsigned int, std::list<Operation *> > *operations)
+void Operations::destroyOperations(MultiProcessesOperations *operations)
 {
     if (0 == operations)
         return;
@@ -29,12 +29,12 @@ Operations::~Operations()
     _operations = 0;
 }
 
-void Operations::setOperations(std::map<unsigned int, std::list<Operation *> > *operations)
+void Operations::setOperations(MultiProcessesOperations *operations)
 {
     _operations = operations;
 }
 
-const std::map<unsigned int, std::list<Operation *> > &Operations::operations()
+const MultiProcessesOperations &Operations::operations()
 {
     const std::map<unsigned int, std::list<Operation *> > *ptr = _operations;
     return *ptr;
