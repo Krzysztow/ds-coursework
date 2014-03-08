@@ -35,6 +35,7 @@ HEADERS += \
     lamportclockhandler.h \
     datafilereader.h \
     opertions.h \
-    tests/operationstester.h
+    tests/operationstester.h \
+    operation.h
 
 LIBS += -lrt

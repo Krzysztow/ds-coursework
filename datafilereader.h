@@ -11,7 +11,7 @@ class DataFileReader
 {
 public:
     DataFileReader();
-    bool createOperationsFromFile(const std::string &filePath, std::map<unsigned int, std::list<Operation *> > *procsOperations);
+    bool createOperationsFromFile(const std::string &filePath, Operations *operations);
 };
 
 #endif // DATAFILEREADER_H

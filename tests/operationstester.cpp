@@ -1,9 +1,12 @@
 #include "operationstester.h"
 
+#include <assert.h>
 #include <list>
 #include <map>
+#include <iostream>
 
 #include "datafilereader.h"
+#include "operation.h"
 
 OperationsTester::OperationsTester()
 {
@@ -13,11 +16,12 @@ void OperationsTester::test()
 {
     DataFileReader reader;
 
-    std::map<unsigned int, std::list<Operation *> > procsOperations;
-    if (! reader.createOperationsFromFile("/home/krzys/Documents/University/ds/ds-assignment/tests/operations.txt", &procsOperations)) {
+    Operations ops;
+    if (! reader.createOperationsFromFile("/home/krzys/Documents/University/ds/ds-assignment/tests/operations.txt", &ops)) {
         assert(false);
     }
 
+    const std::map<unsigned int, std::list<Operation *> > &procsOperations = ops.operations();
     std::map<unsigned int, std::list<Operation *> > testOperations;
     std::list<Operation *> pOps;
 
@@ -52,12 +56,12 @@ void OperationsTester::test()
     pOps.push_back(new PrintOperation("^^^^"));
     testOperations[4] = pOps;
 
-    std::map<unsigned int, std::list<Operation *> >::iterator mainItProcs = procsOperations.begin();
-    std::map<unsigned int, std::list<Operation *> >::iterator mainItTest = testOperations.begin();
+    std::map<unsigned int, std::list<Operation *> >::const_iterator mainItProcs = procsOperations.begin();
+    std::map<unsigned int, std::list<Operation *> >::const_iterator mainItTest = testOperations.begin();
 
     for (; procsOperations.end() != mainItProcs && testOperations.end() != mainItTest; ++mainItProcs, ++mainItTest) {
-        std::list<Operation *>::iterator itProcs = mainItProcs->second.begin();
-        std::list<Operation *>::iterator itTests = mainItTest->second.begin();
+        std::list<Operation *>::const_iterator itProcs = mainItProcs->second.begin();
+        std::list<Operation *>::const_iterator itTests = mainItTest->second.begin();
 
         for (; mainItProcs->second.end() != itProcs && mainItTest->second.end() != itTests; ++itProcs, ++itTests) {
             Operation *op1 = *itTests;

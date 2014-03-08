@@ -5,6 +5,8 @@
 #include <iostream>
 #include <cstdio>
 
+#include "operation.h"
+
 const std::string BeginTag("begin");
 const std::string ProcessTag("process");
 const std::string EndTag("end");
@@ -95,15 +97,17 @@ bool createProcessOperations(std::istream &s, std::list<Operation *> *processOpe
     return false;
 }
 
-bool DataFileReader::createOperationsFromFile(const std::string &filePath, std::map<unsigned int, std::list<Operation *> > *procsOperations)
+bool DataFileReader::createOperationsFromFile(const std::string &filePath, Operations *operations)
 {
-    assert(0 != procsOperations);
+    assert(0 != operations);
 
     std::ifstream f(filePath.c_str());
     if (!f.is_open()) {
         std::cerr << "Cannot open " << filePath << std::endl;
         return false;
     }
+
+    std::map<unsigned int, std::list<Operation *> > *procsOperations = new std::map<unsigned int, std::list<Operation *> >();
 
     std::string token1, token2;
     std::list<Operation *> pOperations;
@@ -148,9 +152,11 @@ bool DataFileReader::createOperationsFromFile(const std::string &filePath, std::
 
     if (errorOccured) {
         //clear all elements in processOperations
+        Operations::destroyOperations(procsOperations);
+        procsOperations = 0;
     }
 
-
+    operations->setOperations(procsOperations);
     return (! errorOccured);
 }
 
