@@ -41,7 +41,7 @@ int main(int argc, const char *argv[]) {
         MultiProcessesOperations::const_iterator mProcsIt = mProcsOptions.begin();
         for (; mProcsOptions.end() != mProcsIt; ++ mProcsIt) {
             MediumParticipantImpl *medParticipant = new MediumParticipantImpl(mProcsIt->first, &rrDispatcher);
-            ProcessObject *process = new ProcessObject(medParticipant);
+            ProcessObject *process = new ProcessObject(medParticipant, mProcsOptions.size(), mProcsIt->first);
             process->setOperations(&(mProcsIt->second));
 
             rrDispatcher.registerParticipant(medParticipant);

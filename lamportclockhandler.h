@@ -1,20 +1,20 @@
 #ifndef LAMPORTCLOCKHANDLER_H
 #define LAMPORTCLOCKHANDLER_H
 
-typedef unsigned int LamportClock;
+#include <stdint.h>
+
+#include "lamportclock.h"
 
 class LamportClockHandler
 {
 public:
-    LamportClockHandler();
+    LamportClockHandler(LamportClock *clock);
 
-    void eventOccured();
-    void messageClockReceived(LamportClock msgClock);
-
-    LamportClock currentClock();
+    int appendClockToMsg(uint8_t *message, int currentSize, int maxSize);
+    int removeClockFromMsg(uint8_t *msg, int currentSize, LamportClock::LamportClockType *msgClock);
 
 private:
-    LamportClock _currClock;
+    LamportClock *_clock;
 };
 
 #endif // LAMPORTCLOCKHANDLER_H

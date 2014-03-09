@@ -34,17 +34,17 @@ private:
 class SendOrRecvOperation:
         public Operation {
 public:
-    SendOrRecvOperation(OperationType operation, unsigned int destProcId, const std::string &message):
+    SendOrRecvOperation(OperationType operation, unsigned int destOrSrcProcId, const std::string &message):
         Operation(operation),
-        _destProcId(destProcId),
+        _destOrSrcProcId(destOrSrcProcId),
         _msg(message)
     {
         assert(OT_Send == operation ||
                OT_Recv == operation);
     }
 
-    unsigned int destProcId() const {
-        return _destProcId;
+    unsigned int destOrSrcProcId() const {
+        return _destOrSrcProcId;
     }
 
     const std::string &message() const {
@@ -54,14 +54,14 @@ public:
     virtual bool operator==(const Operation &other) const {
         if (OT_Send == other.type() || OT_Recv == other.type()) {
             const SendOrRecvOperation *srOp = dynamic_cast<const SendOrRecvOperation*>(&other);
-            return (0 == message().compare(srOp->message()) && destProcId() == srOp->destProcId());
+            return (0 == message().compare(srOp->message()) && destOrSrcProcId() == srOp->destOrSrcProcId());
         }
         else
             return false;
     }
 
 private:
-    unsigned int _destProcId;
+    unsigned int _destOrSrcProcId;
     std::string _msg;
 };
 

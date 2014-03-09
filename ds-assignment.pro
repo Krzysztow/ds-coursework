@@ -21,7 +21,9 @@ SOURCES += \
     lamportclockhandler.cpp \
     datafilereader.cpp \
     opertions.cpp \
-    tests/operationstester.cpp
+    tests/operationstester.cpp \
+    lamportclock.cpp \
+    mutexhandler.cpp
 
 HEADERS += \
     mediumparticipant.h \
@@ -30,6 +32,7 @@ HEADERS += \
     CommMedium/RoundRobinMedium/roundrobinmediumdispatcher.h \
     CommMedium/mediumdispatcher.h \
     CommMedium/mediumparticipantimpl.h \
+    CommMedium/mediumparticipant.h \
     Scheduling/scheduler.h \
     Scheduling/scheduledobject.h \
     Scheduling/RoundRobinScheduler/roundrobinscheduler.h \
@@ -39,6 +42,9 @@ HEADERS += \
     datafilereader.h \
     opertions.h \
     tests/operationstester.h \
-    operation.h
+    operation.h \
+    applicationmessages.h \
+    lamportclock.h \
+    mutexhandler.h
 
 LIBS += -lrt
