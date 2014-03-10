@@ -1,5 +1,8 @@
 #include "roundrobinscheduler.h"
 
+#include <cstdlib>
+#include <time.h>
+
 #include "scheduledobject.h"
 
 typedef std::map<ScheduledObject*, ScheduledObject*>::iterator ObjectsIterator;
@@ -28,16 +31,33 @@ void RoundRobinScheduler::deregisterObject(ScheduledObject *object)
 
 int RoundRobinScheduler::exec()
 {
-    ObjectsIterator it;
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    srand(t.tv_nsec + t.tv_sec);
+
+    ObjectsIterator it = _objects.begin();
     bool finish = false;
+    bool isFirstLoop = true;//needed if we want to randomize start
+
+    //randomize the first object being scheduled
+    const int startObject = rand() % _objects.size();
+    std::advance(it, startObject);
+
     //loop until all objects decide they are done
     while (!finish) {
         finish = true;
-        it = _objects.begin();
         for (; _objects.end() != it; ++it) {
             ScheduledObject::StepResult res = it->second->execStep();
             finish &= (ScheduledObject::MayFinish == res);
         }
+
+        //don't finish after first loop
+        if (isFirstLoop) {
+            isFirstLoop = false;
+            finish = false;
+        }
+
+        it = _objects.begin();
     }
 
     return 0;
