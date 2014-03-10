@@ -228,7 +228,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
         }
         else {
             SendOrReceiveOperationAction *rcvAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
-            std::cout << "Process p" << _medAccess->mediumAddress() << " waiting for msg from p" << rcvAction->operation()->destOrSrcProcId() << std::endl;
+            //std::cout << "Process p" << _medAccess->mediumAddress() << " waiting for msg from p" << rcvAction->operation()->destOrSrcProcId() << std::endl;
         }
     }
         break;
@@ -259,6 +259,8 @@ ScheduledObject::StepResult ProcessObject::execStep()
     }
         break;
     case (OperationAction::OA_Print): {
+        //other operation actions are realised with messages, thus clock is updated. Here it's not a case -> do it manually.
+        _clock.eventOccured();
         //being here, means we had checked for mutex being held
         PrintOperationAction *pAction = dynamic_cast<PrintOperationAction*>(action);
         assert(0 != pAction);
