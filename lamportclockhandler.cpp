@@ -19,7 +19,6 @@ int LamportClockHandler::appendClockToMsg(uint8_t *message, int currentSize, int
 
     _clock->eventOccured();
     LamportClock::LamportClockType value = _clock->currValue();
-    uint8_t *ptr = &message[currentSize];
     memcpy(&message[currentSize], &value, sizeof(LamportClock::LamportClockType));
 
     return sizeof(LamportClock::LamportClockType);

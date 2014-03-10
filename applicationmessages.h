@@ -5,38 +5,48 @@
 
 #define APP_MSG_MAX_DATA_LENGTH 128
 
-enum AppMsgType {
+namespace AppMessages {
+
+enum MsgType {
     AppMsgTrans,
     AppMsgPrint,
     AppMsgMutex
 };
 
-struct TransmissionAppMsg {
-    AppMsgType type;
+struct TransmissionMsgHeader {
+    MsgType type;
     int dataLength;
+};
+
+struct TransmissionMsg {
+    TransmissionMsgHeader header;
     uint8_t data[APP_MSG_MAX_DATA_LENGTH];
 };
 
-struct PrintAppMsg {
-    AppMsgType type;
+struct PrintMsgHeader {
+    MsgType type;
     int dataLength;
+};
+
+struct PrintMsg {
+    PrintMsgHeader header;
     uint8_t data[APP_MSG_MAX_DATA_LENGTH];
 };
 
-struct MutexAppMsg {
-    AppMsgType type;
-
+struct MutexMsg {
+    MsgType type;
     int procId;
     int resourceId;
     bool isAcquire;
 };
 
 union AppMessage {
-    AppMsgType type;
+    MsgType type;
 
-    TransmissionAppMsg transMsg;
-    PrintAppMsg printMsg;
-    MutexAppMsg mutexMsg;
+    TransmissionMsg transMsg;
+    PrintMsg printMsg;
+    MutexMsg mutexMsg;
 };
 
+}
 #endif // APPLICATIONMESSAGES_H

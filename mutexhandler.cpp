@@ -84,8 +84,8 @@ MutexHandler::MutexState MutexHandler::state(int resourceId)
 void MutexHandler::acquire(int resourceId)
 {
     if (Released == state(resourceId)) {
-        MutexAppMsg msg;
-        msg.type = AppMsgMutex;
+        AppMessages::MutexMsg msg;
+        msg.type = AppMessages::AppMsgMutex;
         msg.isAcquire = true;
         msg.resourceId = resourceId;
 
@@ -139,17 +139,18 @@ void MutexHandler::release(int resourceId)
 
 void MutexHandler::_sendMutexMsg(int destAddr, bool isAcquire, int resourceId)
 {
-    AppMessage msg;
-    msg.mutexMsg.type = AppMsgMutex;
+    AppMessages::AppMessage msg;
+    msg.mutexMsg.type = AppMessages::AppMsgMutex;
     msg.mutexMsg.isAcquire = isAcquire;
     msg.mutexMsg.resourceId = resourceId;
     msg.mutexMsg.procId = _procId;
 
     //we still have some spare place after the mutex message
-    _mediumAccess->sendTo((uint8_t*)&msg, sizeof(MutexAppMsg), destAddr);
+    //!note: don't change msg fro, AppMessage to MutexMessage -> we need spare space to append lamport clock
+    _mediumAccess->sendTo((uint8_t*)&msg, sizeof(AppMessages::MutexMsg), destAddr);
 }
 
-void MutexHandler::handleMessage(int srcAddress, MutexAppMsg *mutexMsg, LamportClock::LamportClockType msgClock)
+void MutexHandler::handleMessage(int srcAddress, AppMessages::MutexMsg *mutexMsg, LamportClock::LamportClockType msgClock)
 {
     MutexesData::iterator mdIt = _mutexesData.find(mutexMsg->resourceId);
     if (_mutexesData.end() == mdIt) {//not acquired by us, neither we want it

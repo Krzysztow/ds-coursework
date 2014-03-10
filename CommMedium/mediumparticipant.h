@@ -33,6 +33,12 @@ public:
      */
     virtual int sendTo(uint8_t data[], int size, int destAddr) = 0;
 
+    /**
+     * @brief mediumAddress
+     * @return medium address of the participant.
+     */
+    virtual int mediumAddress() = 0;
+
     virtual ~MediumParticipant() {}
 
 private:

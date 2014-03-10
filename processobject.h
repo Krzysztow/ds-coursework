@@ -13,7 +13,9 @@ class Operation;
 class OperationAction;
 class MutexMediumParticipant;
 class ReceivedMessageData;
+namespace AppMessages {
 union AppMessage;
+}
 
 class ProcessObject:
         public ScheduledObject,
@@ -35,8 +37,8 @@ private:
     void _buildPlan();
     int _sendTo(uint8_t *data, int size, int destAddress);
     int _send(uint8_t *data, int size);
-    void _receive(int srcAddress, AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock);
-
+    void _receive(int srcAddress, AppMessages::AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock);
+    ReceivedMessageData *_takeReceivedMessage(unsigned int srcProcessId);
 
 private:
     MediumParticipant *_medAccess;

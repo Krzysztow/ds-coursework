@@ -89,7 +89,7 @@ private:
 
 class ReceivedMessageData {
 public:
-    ReceivedMessageData(int srcAddress, TransmissionAppMsg *transMsg, int size):
+    ReceivedMessageData(int srcAddress, AppMessages::TransmissionMsg *transMsg, int size):
         src(srcAddress),
         size(size)
     {
@@ -127,6 +127,10 @@ public:
         assert(false);
     }
 
+    virtual int mediumAddress() {
+        return -1;
+    }
+
 private:
     ProcessObject *_procObj;
 };
@@ -153,6 +157,19 @@ void ProcessObject::setOperations(const std::list<Operation *> *operations)
     _operIt = _operations->begin();
 }
 
+ReceivedMessageData *ProcessObject::_takeReceivedMessage(unsigned int srcProcessId) {
+    std::list<ReceivedMessageData*>::iterator msgsIt = _rcvdMessages.begin();
+    for (; _rcvdMessages.end() != msgsIt; ++msgsIt) {
+        if ((*msgsIt)->src == srcProcessId) {
+            ReceivedMessageData *msgData = (*msgsIt);
+            _rcvdMessages.erase(msgsIt, msgsIt);
+            return msgData;
+        }
+    }
+
+    return 0;
+}
+
 ScheduledObject::StepResult ProcessObject::execStep()
 {
     if (0 == _opPlan.size()) {
@@ -166,16 +183,17 @@ ScheduledObject::StepResult ProcessObject::execStep()
     OperationAction *action = _opPlan.front();
     switch (action->type()) {
     case (OperationAction::OA_Send): {
-        TransmissionAppMsg transMsg;
-        transMsg.type = AppMsgTrans;
+        AppMessages::TransmissionMsg transMsg;
+        transMsg.header.type = AppMessages::AppMsgTrans;
         SendOrReceiveOperationAction *sAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
         assert(0 != sAction);
         assert(OperationAction::OA_Send == sAction->type());
         SendOrRecvOperation *sendOp = sAction->operation();
-        transMsg.dataLength = sendOp->message().size();
-        if (transMsg.dataLength <= APP_MSG_MAX_DATA_LENGTH) {
-            memcpy(transMsg.data, sendOp->message().c_str(), transMsg.dataLength);
-            _medAccess->sendTo((uint8_t*)&transMsg, sizeof(transMsg) + transMsg.dataLength, sendOp->destOrSrcProcId());
+        transMsg.header.dataLength = sendOp->message().size();
+        if (transMsg.header.dataLength <= APP_MSG_MAX_DATA_LENGTH) {
+            memcpy(transMsg.data, sendOp->message().c_str(), transMsg.header.dataLength);
+            std::cout << "sent p" << _medAccess->mediumAddress() << " " << sendOp->message() << " p" << sendOp->destOrSrcProcId() << " " << _clock.currValue() << std::endl;
+            _sendTo((uint8_t*)&transMsg, sizeof(transMsg.header) + transMsg.header.dataLength, sendOp->destOrSrcProcId());
         }
         else {
             std::cerr << "Send operation error, data too long" << std::endl;
@@ -189,12 +207,14 @@ ScheduledObject::StepResult ProcessObject::execStep()
             SendOrReceiveOperationAction *rcvAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
             assert(0 != rcvAction);
             assert(OperationAction::OA_Receive == rcvAction->type());
-            ReceivedMessageData *msgData = _rcvdMessages.front();
-            AppMessage *msg = (AppMessage*)msgData->data;
-            assert(AppMsgTrans == msg->type);
-            if (rcvAction->operation()->destOrSrcProcId() == msgData->src) {
-                std::string message((const char*)msg->printMsg.data, msg->printMsg.dataLength);
+            ReceivedMessageData *msgData = _takeReceivedMessage(rcvAction->operation()->destOrSrcProcId());
+            if (0 != msgData) {
+                AppMessages::AppMessage *msg = (AppMessages::AppMessage*)msgData->data;
+                assert(AppMessages::AppMsgTrans == msg->type);
+                std::string message((const char*)msg->printMsg.data, msg->printMsg.header.dataLength);
                 _opPlan.push_back(new PrintOperationAction(message));
+
+                std::cout << "received p" << _medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << _clock.currValue() << std::endl;
 
                 _rcvdMessages.pop_front();
                 delete msgData;
@@ -203,8 +223,12 @@ ScheduledObject::StepResult ProcessObject::execStep()
             }
             else {
                 //is this even possible for recv to be called in different order than send?
-                std::cerr << "Unexpected sender" << std::endl;
+                std::cerr << "None message from " << rcvAction->operation()->destOrSrcProcId() << " for " << _medAccess->mediumAddress() << std::endl;
             }
+        }
+        else {
+            SendOrReceiveOperationAction *rcvAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
+            std::cout << "Process p" << _medAccess->mediumAddress() << " waiting for msg from p" << rcvAction->operation()->destOrSrcProcId() << std::endl;
         }
     }
         break;
@@ -219,7 +243,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
             removeOpAction = true;
         }
         else {
-            std::cout << "Mutex still not held " << _mutexHndlr.state(PrinterMutexResourceIdentifier) << std::endl;
+            //std::cout << "Mutex still not held for " << _medAccess->mediumAddress() << " (state: " << _mutexHndlr.state(PrinterMutexResourceIdentifier) << ")" << std::endl;
         }
     }
         break;
@@ -238,9 +262,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
         //being here, means we had checked for mutex being held
         PrintOperationAction *pAction = dynamic_cast<PrintOperationAction*>(action);
         assert(0 != pAction);
-        pAction->message();
-        const std::string s(pAction->message());
-        std::cout << "MESSAGE: " << s << std::endl;
+        std::cout << "printed p" << _medAccess->mediumAddress() << " " << pAction->message() << " " << _clock.currValue() << std::endl;
         removeOpAction = true;
 
         break;
@@ -268,7 +290,9 @@ int ProcessObject::_sendTo(uint8_t *data, int size, int destAddress)
     }
     else {
         size += ret;
-        return _medAccess->sendTo(data, size, destAddress);
+        ret = _medAccess->sendTo(data, size, destAddress);
+
+        return ret;
     }
 }
 
@@ -281,22 +305,23 @@ int ProcessObject::_send(uint8_t *data, int size)
     }
     else {
         size += ret;
-        return _medAccess->send(data, size);
+        ret = _medAccess->send(data, size);
+        return ret;
     }
 }
 
-void ProcessObject::_receive(int srcAddress, AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock)
+void ProcessObject::_receive(int srcAddress, AppMessages::AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock)
 {
     switch (appMsg->type) {
-    case (AppMsgTrans): {
+    case (AppMessages::AppMsgTrans): {
         _rcvdMessages.push_back(new ReceivedMessageData(srcAddress, &(appMsg->transMsg), size));
     }
         break;
-    case (AppMsgPrint): {
+    case (AppMessages::AppMsgPrint): {
         assert(false);
     }
         break;
-    case (AppMsgMutex): {
+    case (AppMessages::AppMsgMutex): {
         _mutexHndlr.handleMessage(srcAddress, &(appMsg->mutexMsg), msgClock);
     }
         break;
@@ -315,7 +340,7 @@ void ProcessObject::receive(int srcAddress, uint8_t data[], int size)
         assert(false);
     }
     else {
-        AppMessage *appMsg = (AppMessage*)data;
+        AppMessages::AppMessage *appMsg = (AppMessages::AppMessage*)data;
         _receive(srcAddress, appMsg, size - ret, msgClock);
     }
 }

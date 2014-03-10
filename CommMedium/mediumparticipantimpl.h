@@ -18,7 +18,7 @@ public:
 public:
     virtual int send(uint8_t data[], int size);
     virtual int sendTo(uint8_t data[], int size, int destAddr);
-    int mediumAddress();
+    virtual int mediumAddress();
 
     virtual void registerReceiver(MessageReceiver *receiver);
 

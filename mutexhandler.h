@@ -9,7 +9,9 @@
 #include "mediumparticipant.h"
 
 class MutexResourceData;
-class MutexAppMsg;
+namespace AppMessages {
+class MutexMsg;
+}
 
 typedef std::map<int, MutexResourceData*> MutexesData;
 
@@ -28,11 +30,11 @@ public:
     void acquire(int resourceId);
     void release(int resourceId);
 
-    void handleMessage(int srcAddress, MutexAppMsg *mutexMsg, LamportClock::LamportClockType msgClock);
+    void handleMessage(int srcAddress, AppMessages::MutexMsg *mutexMsg, LamportClock::LamportClockType msgClock);
 
 private:
     void _sendMutexMsg(int destAddr, bool isAcquire, int resourceId);
-    void _handleMutexMsg(int srcAddress, MutexAppMsg *mutexMessage, LamportClock msgClock);
+    void _handleMutexMsg(int srcAddress, AppMessages::MutexMsg *mutexMessage, LamportClock msgClock);
 
 private:
     //access to medium to send requests/responses
