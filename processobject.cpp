@@ -89,12 +89,12 @@ private:
 
 class ReceivedMessageData {
 public:
-    ReceivedMessageData(int srcAddress, TransmissionAppMsg *transMsg):
+    ReceivedMessageData(int srcAddress, TransmissionAppMsg *transMsg, int size):
         src(srcAddress),
-        size(transMsg->dataLength)
+        size(size)
     {
         data = new uint8_t[size];
-        memcpy(data, (uint8_t*)(transMsg->data), size);
+        memcpy(data, (uint8_t*)(transMsg), size);
     }
 
     ~ReceivedMessageData() {
@@ -167,6 +167,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
     switch (action->type()) {
     case (OperationAction::OA_Send): {
         TransmissionAppMsg transMsg;
+        transMsg.type = AppMsgTrans;
         SendOrReceiveOperationAction *sAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
         assert(0 != sAction);
         assert(OperationAction::OA_Send == sAction->type());
@@ -288,7 +289,7 @@ void ProcessObject::_receive(int srcAddress, AppMessage *appMsg, int size, Lampo
 {
     switch (appMsg->type) {
     case (AppMsgTrans): {
-        _rcvdMessages.push_back(new ReceivedMessageData(srcAddress, &(appMsg->transMsg)));
+        _rcvdMessages.push_back(new ReceivedMessageData(srcAddress, &(appMsg->transMsg), size));
     }
         break;
     case (AppMsgPrint): {

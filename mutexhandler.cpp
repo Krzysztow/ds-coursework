@@ -114,8 +114,6 @@ void MutexHandler::release(int resourceId)
 
                 _sendMutexMsg(mutReq->srcAddress(), false, resourceId);
 
-                std::cout << "Test" << std::endl;
-
                 delete mutReq;
             }
 
