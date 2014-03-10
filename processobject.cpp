@@ -1,9 +1,9 @@
 #include "processobject.h"
 
 #include <cstring>
-#include <iostream>
 
 #include "applicationmessages.h"
+#include "klogger.h"
 #include "lamportclockhandler.h"
 #include "mediumparticipant.h"
 #include "operation.h"
@@ -192,11 +192,11 @@ ScheduledObject::StepResult ProcessObject::execStep()
         transMsg.header.dataLength = sendOp->message().size();
         if (transMsg.header.dataLength <= APP_MSG_MAX_DATA_LENGTH) {
             memcpy(transMsg.data, sendOp->message().c_str(), transMsg.header.dataLength);
-            std::cout << "sent p" << _medAccess->mediumAddress() << " " << sendOp->message() << " p" << sendOp->destOrSrcProcId() << " " << _clock.currValue() << std::endl;
+            klogger() << "sent p" << _medAccess->mediumAddress() << " " << sendOp->message() << " p" << sendOp->destOrSrcProcId() << " " << _clock.currValue() << klogger::end();
             _sendTo((uint8_t*)&transMsg, sizeof(transMsg.header) + transMsg.header.dataLength, sendOp->destOrSrcProcId());
         }
         else {
-            std::cerr << "Send operation error, data too long" << std::endl;
+            klogger(klogger::Errors) << "Send operation error, data too long" << klogger::end();
         }
 
         removeOpAction = true;
@@ -214,7 +214,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
                 std::string message((const char*)msg->printMsg.data, msg->printMsg.header.dataLength);
                 _opPlan.push_back(new PrintOperationAction(message));
 
-                std::cout << "received p" << _medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << _clock.currValue() << std::endl;
+                klogger() << "received p" << _medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << _clock.currValue() << klogger::end();
 
                 _rcvdMessages.pop_front();
                 delete msgData;
@@ -223,12 +223,12 @@ ScheduledObject::StepResult ProcessObject::execStep()
             }
             else {
                 //is this even possible for recv to be called in different order than send?
-                std::cerr << "None message from " << rcvAction->operation()->destOrSrcProcId() << " for " << _medAccess->mediumAddress() << std::endl;
+                klogger(klogger::Errors) << "None message from " << rcvAction->operation()->destOrSrcProcId() << " for " << _medAccess->mediumAddress() << klogger::end();
             }
         }
         else {
             SendOrReceiveOperationAction *rcvAction = dynamic_cast<SendOrReceiveOperationAction*>(action);
-            //std::cout << "Process p" << _medAccess->mediumAddress() << " waiting for msg from p" << rcvAction->operation()->destOrSrcProcId() << std::endl;
+            klogger(klogger::Info) << "Process p" << _medAccess->mediumAddress() << " waiting for msg from p" << rcvAction->operation()->destOrSrcProcId() << klogger::end();
         }
     }
         break;
@@ -243,7 +243,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
             removeOpAction = true;
         }
         else {
-            //std::cout << "Mutex still not held for " << _medAccess->mediumAddress() << " (state: " << _mutexHndlr.state(PrinterMutexResourceIdentifier) << ")" << std::endl;
+            klogger(klogger::Info) << "Mutex still not held for " << _medAccess->mediumAddress() << " (state: " << _mutexHndlr.state(PrinterMutexResourceIdentifier) << ")" << klogger::end();
         }
     }
         break;
@@ -264,7 +264,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
         //being here, means we had checked for mutex being held
         PrintOperationAction *pAction = dynamic_cast<PrintOperationAction*>(action);
         assert(0 != pAction);
-        std::cout << "printed p" << _medAccess->mediumAddress() << " " << pAction->message() << " " << _clock.currValue() << std::endl;
+        klogger() << "printed p" << _medAccess->mediumAddress() << " " << pAction->message() << " " << _clock.currValue() << klogger::end();
         removeOpAction = true;
 
         break;
@@ -328,7 +328,7 @@ void ProcessObject::_receive(int srcAddress, AppMessages::AppMessage *appMsg, in
     }
         break;
     default:
-        std::cerr << "Received unexpected message " << appMsg->type;
+        klogger(klogger::Errors) << "Received unexpected message " << appMsg->type;
         assert(false);
     }
 }
@@ -390,7 +390,7 @@ void ProcessObject::_buildPlan()
     }
         break;
     case (Operation::OT_EndMutex):
-        std::cerr << "That should never happen!" << std::endl;
+        klogger(klogger::Errors) << "That should never happen!" << klogger::end();
         assert(false);
         break;
     default:

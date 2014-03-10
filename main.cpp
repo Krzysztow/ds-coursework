@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "datafilereader.h"
+#include "klogger.h"
 #include "operation.h"
 #include "mediumparticipantimpl.h"
 #include "processobject.h"
@@ -22,8 +23,8 @@ int main(int argc, const char *argv[]) {
     else if (1 == argc)
         fileName = std::string("../ds-assignment/tests/operations.txt");
     else {
-        std::cerr << "Usage: ";
-        std::cerr << argv[0] << " <operations-file>" << std::endl;
+        std::cout << "Usage: ";
+        std::cout << argv[0] << " <operations-file>" << std::endl;
         return 1;
     }
 
@@ -50,7 +51,7 @@ int main(int argc, const char *argv[]) {
         //could make clean-up
     }
     else {
-        std::cerr << "Cannot parse the file " << fileName;
+        klogger(klogger::Errors) << "Cannot parse the file " << fileName;
     }
 
     return 0;

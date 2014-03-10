@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstdio>
 
+#include "klogger.h"
 #include "operation.h"
 
 const std::string BeginTag("begin");
@@ -26,7 +27,7 @@ size_t findNextCharPos(const std::string &str, size_t startFrom) {
 bool parseProcessId(const std::string &str, unsigned int *procId) {
     int ret = sscanf(str.c_str(), "p%ud", procId);
     if (1 != ret) {
-        std::cerr << "Cannot get process id" << std::endl;
+        klogger(klogger::Errors) << "Cannot get process id" << klogger::end();
         return false;
     }
     return true;
@@ -57,7 +58,7 @@ bool createProcessOperations(std::istream &s, std::list<Operation *> *processOpe
         else if (0 == token.compare(BeginTag)) {
             s >> token;
             if (isInMutex) {
-                std::cerr << "Cannot nest mutexes!" << std::endl;
+                klogger(klogger::Errors) << "Cannot nest mutexes!" << klogger::end();
                 break;
             }
             else if (0 == token.compare(MutexTag)) {
@@ -65,7 +66,7 @@ bool createProcessOperations(std::istream &s, std::list<Operation *> *processOpe
                 processOperations->push_back(new MutexOperation(Operation::OT_BeginMutex));
             }
             else {
-                std::cerr << "Unexpected tag: " << token << std::endl;
+                klogger(klogger::Errors) << "Unexpected tag: " << token << klogger::end();
                 break;
             }
         }
@@ -77,13 +78,13 @@ bool createProcessOperations(std::istream &s, std::list<Operation *> *processOpe
             }
             else if (0 == token.compare(MutexTag)) {
                 if (! isInMutex) {
-                    std::cerr << "Not expected end of mutex" << std::endl;
+                    klogger(klogger::Errors) << "Not expected end of mutex" << klogger::end();
                     break;
                 }
                 processOperations->push_back(new MutexOperation(Operation::OT_EndMutex));
             }
             else {
-                std::cerr << "Unexpected tag " << token << std::endl;
+                klogger(klogger::Errors) << "Unexpected tag " << token << klogger::end();
                 break;
             }
         }
@@ -103,7 +104,7 @@ bool DataFileReader::createOperationsFromFile(const std::string &filePath, Opera
 
     std::ifstream f(filePath.c_str());
     if (!f.is_open()) {
-        std::cerr << "Cannot open " << filePath << std::endl;
+        klogger(klogger::Errors) << "Cannot open " << filePath << klogger::end();
         return false;
     }
 
@@ -130,7 +131,7 @@ bool DataFileReader::createOperationsFromFile(const std::string &filePath, Opera
             }
 
             if (procsOperations->end() != procsOperations->find(procId)) {
-                std::cerr << "Duplicated processes ids" << std::endl;
+                klogger(klogger::Errors) << "Duplicated processes ids" << klogger::end();
                 errorOccured = true;
                 break;
             }
@@ -140,13 +141,13 @@ bool DataFileReader::createOperationsFromFile(const std::string &filePath, Opera
                 (*procsOperations)[procId] = pOperations;
             }
             else {
-                std::cerr << "Cannot parse process operations" << std::endl;
+                klogger(klogger::Errors) << "Cannot parse process operations" << klogger::end();
                 errorOccured = true;
                 break;
             }
         }
         else {
-            std::cerr << "Problem parsing begin process" << std::endl;
+            klogger(klogger::Errors) << "Problem parsing begin process" << klogger::end();
         }
     }
 

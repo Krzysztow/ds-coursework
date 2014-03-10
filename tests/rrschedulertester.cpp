@@ -7,10 +7,12 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "RoundRobinMedium/roundrobinmediumdispatcher.h"
+#include "klogger.h"
 #include "mediumparticipantimpl.h"
 #include "mediumparticipant.h"
+#include "RoundRobinMedium/roundrobinmediumdispatcher.h"
 #include "scheduledobject.h"
+
 
 using namespace std;
 
@@ -39,7 +41,7 @@ public:
             uint8_t data[64];
             int destAddr = rand() % (totalNumOfParticipants + 1) - 1;
             int dataSize = sprintf((char*)data, "SEND: from %d to %d", _mediumParticipant->mediumAddress(), destAddr);
-            std::cout << data << std::endl;
+            klogger(klogger::Tests) << data << klogger::end();
             if (destAddr >=0) {
                 _mediumParticipant->sendTo(data, dataSize, destAddr);
                 ++(*_totalMessagesPtr);
@@ -64,7 +66,7 @@ public:
 
     virtual void receive(int srcAddress, uint8_t data[], int size) {
         assert(strlen((char*)data) == size);
-        std::cout << "RCVD: " <<  data <<  "from " << srcAddress << std::endl;
+        klogger(klogger::Tests) << "RCVD: " <<  data <<  "from " << srcAddress << klogger::end();
         --(*_totalMessagesPtr);
     }
 

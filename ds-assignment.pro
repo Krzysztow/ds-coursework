@@ -7,7 +7,8 @@ CONFIG -= release
 CONFIG += debug
 
 INCLUDEPATH += ./CommMedium \
-    ./Scheduling
+    ./Scheduling \
+    ./utils
 
 SOURCES += \
     main.cpp \
@@ -25,7 +26,8 @@ SOURCES += \
     lamportclock.cpp \
     mutexhandler.cpp \
     tests/lamportclocktest.cpp \
-    tests/tests.cpp
+    tests/tests.cpp \
+    utils/klogger.cpp
 
 HEADERS += \
     mediumparticipant.h \
@@ -49,6 +51,7 @@ HEADERS += \
     lamportclock.h \
     mutexhandler.h \
     tests/lamportclocktest.h \
-    tests/tests.h
+    tests/tests.h \
+    utils/klogger.h
 
 LIBS += -lrt
