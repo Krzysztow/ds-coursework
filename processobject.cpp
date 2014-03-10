@@ -1,6 +1,7 @@
 #include "processobject.h"
 
 #include <cstring>
+#include <sstream>
 
 #include "applicationmessages.h"
 #include "klogger.h"
@@ -136,6 +137,7 @@ private:
 };
 
 static const int PrinterMutexResourceIdentifier = 0;
+static const int PrinterMediumAddress = 255;
 
 ProcessObject::ProcessObject(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId):
     _medAccess(mediumParticipant),
@@ -211,8 +213,10 @@ ScheduledObject::StepResult ProcessObject::execStep()
             if (0 != msgData) {
                 AppMessages::AppMessage *msg = (AppMessages::AppMessage*)msgData->data;
                 assert(AppMessages::AppMsgTrans == msg->type);
+
+                //we shouldn't send to print the received message
                 std::string message((const char*)msg->printMsg.data, msg->printMsg.header.dataLength);
-                _opPlan.push_back(new PrintOperationAction(message));
+                //_opPlan.push_back(new PrintOperationAction(message));
 
                 klogger() << "received p" << _medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << _clock.currValue() << klogger::end();
 
@@ -264,7 +268,17 @@ ScheduledObject::StepResult ProcessObject::execStep()
         //being here, means we had checked for mutex being held
         PrintOperationAction *pAction = dynamic_cast<PrintOperationAction*>(action);
         assert(0 != pAction);
-        klogger() << "printed p" << _medAccess->mediumAddress() << " " << pAction->message() << " " << _clock.currValue() << klogger::end();
+        std::stringstream s;
+        s << "printed p" << _medAccess->mediumAddress() << " " << pAction->message() << " " << _clock.currValue();
+
+        AppMessages::PrintMsg printMsg;
+        printMsg.header.type = AppMessages::AppMsgPrint;
+        //! todo: check if the string is not too long!
+        std::string fullMsg = s.str();
+        printMsg.header.dataLength = fullMsg.copy((char*)printMsg.data, fullMsg.size());
+
+        _sendTo((uint8_t*)&printMsg, sizeof(AppMessages::PrintMsgHeader) + printMsg.header.dataLength, PrinterMediumAddress);
+
         removeOpAction = true;
 
         break;

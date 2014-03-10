@@ -27,7 +27,8 @@ SOURCES += \
     mutexhandler.cpp \
     tests/lamportclocktest.cpp \
     tests/tests.cpp \
-    utils/klogger.cpp
+    utils/klogger.cpp \
+    networkprinter.cpp
 
 HEADERS += \
     mediumparticipant.h \
@@ -52,6 +53,7 @@ HEADERS += \
     mutexhandler.h \
     tests/lamportclocktest.h \
     tests/tests.h \
-    utils/klogger.h
+    utils/klogger.h \
+    networkprinter.h
 
 LIBS += -lrt

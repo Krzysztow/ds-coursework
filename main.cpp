@@ -4,6 +4,7 @@
 #include "klogger.h"
 #include "operation.h"
 #include "mediumparticipantimpl.h"
+#include "networkprinter.h"
 #include "processobject.h"
 #include "scheduledmediumdispatcher.h"
 
@@ -46,6 +47,9 @@ int main(int argc, const char *argv[]) {
             rrDispatcher.registerParticipant(medParticipant);
             scheduler.registerObject(process);
         }
+
+        MediumParticipantImpl printerParticipant(255, &rrDispatcher);
+        NetworkPrinter printer(&printerParticipant);
 
         scheduler.exec();
         //could make clean-up
