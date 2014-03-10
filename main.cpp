@@ -2,21 +2,19 @@
 
 #include "datafilereader.h"
 #include "operation.h"
-#include "tests/rrschedulertester.h"
-#include "tests/operationstester.h"
+#include "mediumparticipantimpl.h"
+#include "processobject.h"
+#include "scheduledmediumdispatcher.h"
 
 #include "RoundRobinScheduler/roundrobinscheduler.h"
-#include "scheduledmediumdispatcher.h"
 #include "RoundRobinMedium/roundrobinmediumdispatcher.h"
-#include "processobject.h"
-#include "mediumparticipantimpl.h"
+
+#include "tests/tests.h"
 
 int main(int argc, const char *argv[]) {
-    RRSchedulerTester tester;
-    tester.test();
+    Tests t;
+    t.test();
 
-    OperationsTester tester2;
-    tester2.test();
 
     std::string fileName;
     if (2 == argc)

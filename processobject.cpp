@@ -18,6 +18,7 @@ public:
         OA_Receive,
         OA_Print,
         OA_MutexAcquire,
+        OA_MutexCheckHeld,
         OA_MutexRelease
     };
 
@@ -68,6 +69,7 @@ public:
 
     PrintOperationAction(const std::string &message):
         OperationAction(OperationAction::OA_Print),
+        _op(0),
         _message(message)
     {}
 
@@ -129,6 +131,8 @@ private:
     ProcessObject *_procObj;
 };
 
+static const int PrinterMutexResourceIdentifier = 0;
+
 ProcessObject::ProcessObject(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId):
     _medAccess(mediumParticipant),
     _mutexMedAccess(new MutexMediumParticipant(this)),
@@ -158,6 +162,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
     if (0 == _opPlan.size())
         return ScheduledObject::MayFinish;
 
+    bool removeOpAction = false;
     OperationAction *action = _opPlan.front();
     switch (action->type()) {
     case (OperationAction::OA_Send): {
@@ -175,8 +180,7 @@ ScheduledObject::StepResult ProcessObject::execStep()
             std::cerr << "Send operation error, data too long" << std::endl;
         }
 
-        delete action;
-        _opPlan.pop_front();
+        removeOpAction = true;
     }
         break;
     case (OperationAction::OA_Receive): {
@@ -193,6 +197,8 @@ ScheduledObject::StepResult ProcessObject::execStep()
 
                 _rcvdMessages.pop_front();
                 delete msgData;
+
+                removeOpAction = true;
             }
             else {
                 //is this even possible for recv to be called in different order than send?
@@ -202,14 +208,39 @@ ScheduledObject::StepResult ProcessObject::execStep()
     }
         break;
     case (OperationAction::OA_MutexAcquire): {
+        _mutexHndlr.acquire(PrinterMutexResourceIdentifier);
 
+        removeOpAction = true;
+    }
+        break;
+    case (OperationAction::OA_MutexCheckHeld): {
+        if (MutexHandler::Held == _mutexHndlr.state(PrinterMutexResourceIdentifier)) {
+            removeOpAction = true;
+        }
+        else {
+            std::cout << "Mutex still not held " << _mutexHndlr.state(PrinterMutexResourceIdentifier) << std::endl;
+        }
     }
         break;
     case (OperationAction::OA_MutexRelease): {
+        if (MutexHandler::Held == _mutexHndlr.state(PrinterMutexResourceIdentifier)) {
+            _mutexHndlr.release(PrinterMutexResourceIdentifier);
 
+            removeOpAction = true;
+        }
+        else {
+            assert(false);
+        }
     }
         break;
     case (OperationAction::OA_Print): {
+        //being here, means we had checked for mutex being held
+        PrintOperationAction *pAction = dynamic_cast<PrintOperationAction*>(action);
+        assert(0 != pAction);
+        pAction->message();
+        const std::string s(pAction->message());
+        std::cout << "MESSAGE: " << s << std::endl;
+        removeOpAction = true;
 
         break;
     }
@@ -217,7 +248,10 @@ ScheduledObject::StepResult ProcessObject::execStep()
         assert(false);
     }
 
-
+    if (removeOpAction) {
+        delete action;
+        _opPlan.pop_front();
+    }
 
     return ScheduledObject::NotFinished;
 }
@@ -304,13 +338,17 @@ void ProcessObject::_buildPlan()
     }
         break;
     case (Operation::OT_Print): {//print out of mutex block
+        PrintOperation *pOp = dynamic_cast<PrintOperation*>(op);
+        assert(0 != pOp);
         _opPlan.push_back(new OperationAction(OperationAction::OA_MutexAcquire));
-        _opPlan.push_back(new OperationAction(OperationAction::OA_MutexAcquire));
-        _opPlan.push_back(new OperationAction(OperationAction::OA_MutexAcquire));
+        _opPlan.push_back(new OperationAction(OperationAction::OA_MutexCheckHeld));
+        _opPlan.push_back(new PrintOperationAction(pOp->message()));
+        _opPlan.push_back(new OperationAction(OperationAction::OA_MutexRelease));
     }
         break;
     case (Operation::OT_BeginMutex): {
         _opPlan.push_back(new OperationAction(OperationAction::OA_MutexAcquire));
+        _opPlan.push_back(new OperationAction(OperationAction::OA_MutexCheckHeld));
         op = *_operIt;
         while (Operation::OT_Print == op->type()) {
             PrintOperation *pOp = dynamic_cast<PrintOperation*>(op);
@@ -319,6 +357,7 @@ void ProcessObject::_buildPlan()
             op = *(++_operIt);
         }
         assert(Operation::OT_EndMutex == op->type());
+        ++_operIt;
         _opPlan.push_back(new OperationAction(OperationAction::OA_MutexRelease));
     }
         break;

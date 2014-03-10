@@ -26,9 +26,10 @@ private:
 
 class MutexResourceData {
 public:
-    MutexResourceData(MutexHandler::MutexState state, int awaitingConfirmationsNo):
+    MutexResourceData(MutexHandler::MutexState state, int awaitingConfirmationsNo, LamportClock::LamportClockType requestTime):
         _state(state),
-        _awaitingConfirmations(awaitingConfirmationsNo)
+        _awaitingConfirmations(awaitingConfirmationsNo),
+        _reqTime(requestTime)
     {
     }
 
@@ -52,10 +53,16 @@ public:
         return _queuedRequests;
     }
 
+    LamportClock::LamportClockType reqTime() {
+        return _reqTime;
+    }
+
 private:
     std::list<MutexRequest*> _queuedRequests;
     MutexHandler::MutexState _state;
+
     int _awaitingConfirmations;
+    LamportClock::LamportClockType _reqTime;
 };
 
 MutexHandler::MutexHandler(MediumParticipant *medAccess, int processesId, int allProcsNo, LamportClock *clock):
@@ -83,14 +90,15 @@ void MutexHandler::acquire(int resourceId)
         msg.resourceId = resourceId;
 
         _mediumAccess->send((uint8_t*)&msg, sizeof(msg));
-        _mutexesData[resourceId] = new MutexResourceData(MutexHandler::Wanted, _otherProcsNo);
+        //be sure to create MutexResourceData after send - lamport clock is incremented
+        _mutexesData[resourceId] = new MutexResourceData(MutexHandler::Wanted, _otherProcsNo, _clock->currValue());
     }
     else {
         assert(false);
     }
 }
 
-
+#include <iostream>
 void MutexHandler::release(int resourceId)
 {
     MutexesData::iterator mdIt = _mutexesData.find(resourceId);
@@ -99,12 +107,14 @@ void MutexHandler::release(int resourceId)
         if (Held == mrd->state()) {
             _mutexesData.erase(mdIt);
 
-            std::list<MutexRequest*> &queuedMutxReqs = mrd->queuedReqs();
-            while (! queuedMutxReqs.empty()) {
-                MutexRequest *mutReq = queuedMutxReqs.front();
-                queuedMutxReqs.pop_front();
+            //std::list<MutexRequest*> &queuedMutxReqs = mrd->queuedReqs();
+            while (! mrd->queuedReqs().empty()) {
+                MutexRequest *mutReq = mrd->queuedReqs().front();
+                mrd->queuedReqs().pop_front();
 
                 _sendMutexMsg(mutReq->srcAddress(), false, resourceId);
+
+                std::cout << "Test" << std::endl;
 
                 delete mutReq;
             }
@@ -131,27 +141,33 @@ void MutexHandler::release(int resourceId)
 
 void MutexHandler::_sendMutexMsg(int destAddr, bool isAcquire, int resourceId)
 {
-    MutexAppMsg msg;
-    msg.type = AppMsgMutex;
-    msg.isAcquire = isAcquire;
-    msg.resourceId = resourceId;
-    msg.procId = _procId;
+    AppMessage msg;
+    msg.mutexMsg.type = AppMsgMutex;
+    msg.mutexMsg.isAcquire = isAcquire;
+    msg.mutexMsg.resourceId = resourceId;
+    msg.mutexMsg.procId = _procId;
 
-    _mediumAccess->sendTo((uint8_t*)&msg, sizeof(msg), destAddr);
+    //we still have some spare place after the mutex message
+    _mediumAccess->sendTo((uint8_t*)&msg, sizeof(MutexAppMsg), destAddr);
 }
 
 void MutexHandler::handleMessage(int srcAddress, MutexAppMsg *mutexMsg, LamportClock::LamportClockType msgClock)
 {
     MutexesData::iterator mdIt = _mutexesData.find(mutexMsg->resourceId);
     if (_mutexesData.end() == mdIt) {//not acquired by us, neither we want it
-        _sendMutexMsg(srcAddress, false, mutexMsg->resourceId);
+        if (mutexMsg->isAcquire) {
+            _sendMutexMsg(srcAddress, false, mutexMsg->resourceId);
+        }
+        else {
+            assert(false);
+        }
     }
     else {
         //either we want it or have it
         MutexResourceData *mrd = mdIt->second;
         if (mutexMsg->isAcquire) {//it's a request for mutex
             if (MutexHandler::Wanted == mrd->state()) {//we want mutex
-                if (-1 == LamportClock::compareClocks(_clock->currValue(), _procId, msgClock, srcAddress)) {//we requested earlier
+                if (-1 == LamportClock::compareClocks(mrd->reqTime(), _procId, msgClock, srcAddress)) {//we requested earlier
                     //do nothing, just queue
                     mrd->appendAwaitingReq(srcAddress, mutexMsg->procId);
                 }

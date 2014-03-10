@@ -19,6 +19,7 @@ int LamportClockHandler::appendClockToMsg(uint8_t *message, int currentSize, int
 
     _clock->eventOccured();
     LamportClock::LamportClockType value = _clock->currValue();
+    uint8_t *ptr = &message[currentSize];
     memcpy(&message[currentSize], &value, sizeof(LamportClock::LamportClockType));
 
     return sizeof(LamportClock::LamportClockType);
@@ -31,7 +32,7 @@ int LamportClockHandler::removeClockFromMsg(uint8_t *msg, int currentSize, Lampo
         return -1;
     }
     else {
-        memcpy(&msgClock, msg + currentSize - sizeof(LamportClock::LamportClockType), sizeof(LamportClock::LamportClockType));
+        memcpy(msgClock, msg + currentSize - sizeof(LamportClock::LamportClockType), sizeof(LamportClock::LamportClockType));
         _clock->updateValue(*msgClock);
         return sizeof(LamportClock::LamportClockType);
     }

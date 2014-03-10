@@ -23,7 +23,9 @@ SOURCES += \
     opertions.cpp \
     tests/operationstester.cpp \
     lamportclock.cpp \
-    mutexhandler.cpp
+    mutexhandler.cpp \
+    tests/lamportclocktest.cpp \
+    tests/tests.cpp
 
 HEADERS += \
     mediumparticipant.h \
@@ -45,6 +47,8 @@ HEADERS += \
     operation.h \
     applicationmessages.h \
     lamportclock.h \
-    mutexhandler.h
+    mutexhandler.h \
+    tests/lamportclocktest.h \
+    tests/tests.h
 
 LIBS += -lrt
