@@ -54,6 +54,13 @@ private:
 
     LamportClock _clock;
     LamportClockHandler _clockHandler;
+
+    friend class OperationAction;
+    friend class SendOperationAction;
+    friend class RecvOpeartionAction;
+    friend class AcquireMutexAction;
+    friend class ReleaseMutexAction;
+    friend class PrintOperationAction;
 };
 
 #endif // PROCESSOBJECT_H

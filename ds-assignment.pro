@@ -6,6 +6,8 @@ CONFIG -= qt
 CONFIG -= release
 CONFIG += debug
 
+QMAKE_CXXFLAGS += -std=c++0x
+
 INCLUDEPATH += ./CommMedium \
     ./Scheduling \
     ./utils
