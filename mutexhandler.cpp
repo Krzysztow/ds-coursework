@@ -88,7 +88,7 @@ void MutexHandler::acquire(int resourceId)
     if (Released == state(resourceId)) {
         AppMessages::MutexMsg msg;
         msg.type = AppMessages::AppMsgMutex;
-        msg.isAcquire = true;
+        msg.requestType = AppMessages::MutexRequired;
         msg.resourceId = resourceId;
 
         klogger(klogger::Info) << _dbgMessage << " mutex acquisition trial" << klogger::end();
@@ -146,7 +146,7 @@ void MutexHandler::_sendMutexMsg(int destAddr, bool isAcquire, int resourceId)
 {
     AppMessages::AppMessage msg;
     msg.mutexMsg.type = AppMessages::AppMsgMutex;
-    msg.mutexMsg.isAcquire = isAcquire;
+    msg.mutexMsg.requestType = (isAcquire ? AppMessages::MutexRequired : AppMessages::MutexGranted);
     msg.mutexMsg.resourceId = resourceId;
     msg.mutexMsg.procId = _procId;
 
@@ -158,44 +158,46 @@ void MutexHandler::_sendMutexMsg(int destAddr, bool isAcquire, int resourceId)
 void MutexHandler::handleMessage(int srcAddress, AppMessages::MutexMsg *mutexMsg, LamportClock::LamportClockType msgClock)
 {
     MutexesData::iterator mdIt = _mutexesData.find(mutexMsg->resourceId);
-    if (_mutexesData.end() == mdIt) {//not acquired by us, neither we want it
-        if (mutexMsg->isAcquire) {
-            _sendMutexMsg(srcAddress, false, mutexMsg->resourceId);
+    bool handlerIsInterested = (_mutexesData.end() != mdIt);//if we were interested with this resource up to now? (we are in wanted or held state)
+    switch (mutexMsg->requestType) {
+    case (AppMessages::MutexGranted): {
+        if (handlerIsInterested) {//we are interested in mutex and someone granted it to us
+            MutexResourceData *mrd = mdIt->second;
+            if (mrd->confirmationReceived()) {
+                mrd->setState(MutexHandler::Held);
+                klogger(klogger::Info) << _dbgMessage << " mutex acquired" << klogger::end();
+            }
         }
-        else {
+        else {//we are not interested, but someone granted it to us
+            klogger(klogger::Errors) << _dbgMessage << " mutex allowance, although not asked for" << klogger::end();
             assert(false);
         }
     }
-    else {
-        //either we want it or have it
-        MutexResourceData *mrd = mdIt->second;
-        if (mutexMsg->isAcquire) {//it's a request for mutex
-            if (MutexHandler::Wanted == mrd->state()) {//we want mutex
-                if (-1 == LamportClock::compareClocks(mrd->reqTime(), _procId, msgClock, srcAddress)) {//we requested earlier
-                    //do nothing, just queue
+        break;
+    case (AppMessages::MutexRequired):
+        if (handlerIsInterested) {//we are interested, but someone else too
+            MutexResourceData *mrd = mdIt->second;
+            if (MutexHandler::Wanted == mrd->state()) {//we are still waiting for all permissions, thus need to check who was earlier
+                if (-1 == LamportClock::compareClocks(mrd->reqTime(), _procId, msgClock, srcAddress)) {//we requested earlier, just queue
                     mrd->appendAwaitingReq(srcAddress, mutexMsg->procId);
                 }
-                else {//the other process requested earlier
+                else {//the other process requested earlier - grant it permission
                     _sendMutexMsg(srcAddress, false, mutexMsg->resourceId);
                 }
             }
-            else if (MutexHandler::Held == mrd->state()) {//we hold mutex
+            else if (MutexHandler::Held == mrd->state()) {//we already hold mutex, queue
                 mrd->appendAwaitingReq(srcAddress, mutexMsg->procId);
             }
-            else
+            else//can't be interested and not in one of those states
                 assert(false);
         }
-        else {//it's an allowance for mutex
-            if (MutexHandler::Wanted == mrd->state()) {//we indeed wanted it
-                if (mrd->confirmationReceived()) {
-                    mrd->setState(MutexHandler::Held);
-                    klogger(klogger::Info) << _dbgMessage << " mutex acquired" << klogger::end();
-                }
-            }
-            else {//anything else, shouldn't happen
-                assert(false);
-            }
+        else {//we are not interested, but others are. Grant him permission.
+            _sendMutexMsg(srcAddress, false, mutexMsg->resourceId);
         }
+        break;
+    default:
+        klogger(klogger::Errors) << "Unknown mutex type " << mutexMsg->type << klogger::end();
+        assert(false);
     }
 }
 

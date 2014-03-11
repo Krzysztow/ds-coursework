@@ -20,14 +20,14 @@ MediumParticipantImpl::~MediumParticipantImpl()
 
 int MediumParticipantImpl::_send(uint8_t data[], int size, int destAddr)
 {
+    int srcAddr = mediumAddress();
     //just make sure there is such a destination participant (or broadcast)
     if (!_scheduler->isBcastAddress(destAddr)) {
-        if (!_scheduler->isParticipantReachable(destAddr))//no destination - so there would be no connection, fail
+        if (!_scheduler->isParticipantReachable(srcAddr, destAddr))//no destination - so there would be no connection, fail
             return -2;
     }
 
     //is sender registered with medium?
-    int srcAddr = mediumAddress();
     if (!_scheduler->containsParticipant(srcAddr))
         return -3;
 

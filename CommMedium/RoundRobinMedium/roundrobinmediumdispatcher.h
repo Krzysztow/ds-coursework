@@ -11,6 +11,16 @@ class MediumParticipantImpl;
 class ParticipantData;
 class MediumMessage;
 
+/**
+ * @brief The RoundRobinMediumDispatcher class - dispatcher class that takes
+ * iterates over it's participants pops one least recent message for each, and sends it to
+ * appropriate destinations.
+ *
+ * This seems to simulate network communication pretty well:
+ * - message ordering is preserved (at least within one process);
+ * - if one process sends many messages it will not use all the bus, but will share it fairly with other processes.
+ */
+
 class RoundRobinMediumDispatcher:
         public MediumDispatcher
 {
@@ -45,8 +55,16 @@ public:
     virtual bool registerParticipant(MediumParticipantImpl *participant);
     virtual bool deregisterParticipant(MediumParticipantImpl *participant);
 
-    virtual bool isParticipantReachable(int address);
+    /**
+     * @brief containsParticipant checks if participant with @param address is registered on the bus.
+     */
     virtual bool containsParticipant(int address);
+    /**
+     * @brief isParticipantReachable now does tha same as @sa containsParticipant()
+     * The idea is to be able to check
+     * @return
+     */
+    virtual bool isParticipantReachable(int srcAddress, int destAddress);
 
 private:
     std::map<int, ParticipantData*> _participants;

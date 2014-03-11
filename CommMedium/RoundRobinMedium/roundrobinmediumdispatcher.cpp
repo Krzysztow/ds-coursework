@@ -87,9 +87,10 @@ bool RoundRobinMediumDispatcher::deregisterParticipant(MediumParticipantImpl *pa
     return (1 == _participants.erase(participant->mediumAddress()));
 }
 
-bool RoundRobinMediumDispatcher::isParticipantReachable(int address)
+bool RoundRobinMediumDispatcher::isParticipantReachable(int srcAddress, int destAddress)
 {
-    return (0 != _participants.count(address));
+    (void)srcAddress;
+    return (0 != _participants.count(destAddress));
 }
 
 bool RoundRobinMediumDispatcher::containsParticipant(int address)

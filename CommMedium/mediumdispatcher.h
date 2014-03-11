@@ -41,7 +41,7 @@ public:
     virtual bool registerParticipant(MediumParticipantImpl *participant) = 0;
     virtual bool deregisterParticipant(MediumParticipantImpl *participant) = 0;
 
-    virtual bool isParticipantReachable(int address) = 0;
+    virtual bool isParticipantReachable(int srcAddress, int destAddress) = 0;
     virtual bool containsParticipant(int address) = 0;
 
 protected:

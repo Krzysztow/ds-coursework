@@ -13,6 +13,14 @@
 
 #include "tests/tests.h"
 
+/**
+ * The input file is read, and if parsed successfully, appropriate processes are created. Their id is the same as
+ * medium addresss.
+ *
+ * All the processes are participants of the communication medium and schedulable objects.
+ * The communication medium dispatcher is a schedulable object as well, so that it gets some time slice to dispatch messages to participants.
+ */
+
 int main(int argc, const char *argv[]) {
     Tests t;
 //    t.test();

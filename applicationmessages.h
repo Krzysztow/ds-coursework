@@ -13,6 +13,10 @@ enum MsgType {
     AppMsgMutex
 };
 
+/**
+ * @brief Protocol messages that transport a text message from one to second process.
+ * They are responsivle for SEND/RECV operations.
+ */
 struct TransmissionMsgHeader {
     MsgType type;
     int dataLength;
@@ -22,6 +26,11 @@ struct TransmissionMsg {
     TransmissionMsgHeader header;
     uint8_t data[APP_MSG_MAX_DATA_LENGTH];
 };
+
+/**
+ * @brief Protocol Print messssages that transport appropriate print text to the
+ * network printer.
+ */
 
 struct PrintMsgHeader {
     MsgType type;
@@ -33,11 +42,21 @@ struct PrintMsg {
     uint8_t data[APP_MSG_MAX_DATA_LENGTH];
 };
 
+/**
+ * @brief Protocol mutex messages that take care of requesting for permission and granting
+ * permission over the mutual exclusion.
+ */
+
+enum MutexMessageType {
+    MutexRequired,
+    MutexGranted
+};
+
 struct MutexMsg {
     MsgType type;
     int procId;
     int resourceId;
-    bool isAcquire;
+    MutexMessageType requestType;
 };
 
 union AppMessage {

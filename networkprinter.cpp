@@ -12,6 +12,7 @@ NetworkPrinter::NetworkPrinter(MediumParticipant *mediumParticipant)
 
 void NetworkPrinter::receive(int srcAddress, uint8_t data[], int size)
 {
+    (void)size;
     AppMessages::AppMessage *appMsg = (AppMessages::AppMessage*)data;
     if (AppMessages::AppMsgPrint == appMsg->type) {
         std::string message((char*)(appMsg->printMsg.data), appMsg->printMsg.header.dataLength);
