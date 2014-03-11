@@ -4,6 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "klogger.h"
 #include "scheduledobject.h"
 
 typedef std::map<ScheduledObject*, ScheduledObject*>::iterator ObjectsIterator;
@@ -47,6 +48,8 @@ int RoundRobinScheduler::exec()
     //loop until all objects decide they are done
     while (!finish) {
         finish = true;
+        klogger(klogger::Info) << "- Scheduler loop starts" << klogger::end();
+
         for (; _objects.end() != it; ++it) {
             ScheduledObject::StepResult res = it->second->execStep();
             finish &= (ScheduledObject::MayFinish == res);
@@ -60,6 +63,7 @@ int RoundRobinScheduler::exec()
 
         it = _objects.begin();
 
+        klogger(klogger::Info) << "- Scheduler loop ends" << klogger::end();
         usleep(10000);
     }
 

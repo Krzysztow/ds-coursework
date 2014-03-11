@@ -5,6 +5,11 @@
 
 class MediumDispatcher;
 
+/**
+ * @brief The ScheduledMediumDispatcher class - wrapper for a MediumDispatcher so that
+ * it can be scheduled by a Scheduler class.
+ */
+
 class ScheduledMediumDispatcher:
         public ScheduledObject
 {

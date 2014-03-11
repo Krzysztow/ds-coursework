@@ -66,11 +66,12 @@ private:
     LamportClock::LamportClockType _reqTime;
 };
 
-MutexHandler::MutexHandler(MediumParticipant *medAccess, int processesId, int allProcsNo, LamportClock *clock):
+MutexHandler::MutexHandler(MediumParticipant *medAccess, int processesId, int allProcsNo, LamportClock *clock, const std::string &dbgMsg):
     _mediumAccess(medAccess),
     _procId(processesId),
     _otherProcsNo(allProcsNo - 1),
-    _clock(clock)
+    _clock(clock),
+    _dbgMessage(dbgMsg)
 {
 }
 
@@ -90,6 +91,8 @@ void MutexHandler::acquire(int resourceId)
         msg.isAcquire = true;
         msg.resourceId = resourceId;
 
+        klogger(klogger::Info) << _dbgMessage << " mutex acquisition trial" << klogger::end();
+
         _mediumAccess->send((uint8_t*)&msg, sizeof(msg));
         //be sure to create MutexResourceData after send - lamport clock is incremented
         _mutexesData[resourceId] = new MutexResourceData(MutexHandler::Wanted, _otherProcsNo, _clock->currValue());
@@ -108,7 +111,7 @@ void MutexHandler::release(int resourceId)
         if (Held == mrd->state()) {
             _mutexesData.erase(mdIt);
 
-            klogger(klogger::Info) << "releasing mutex - informing " << mrd->queuedReqs().size() << " processes" << klogger::end();
+            klogger(klogger::Info) << _dbgMessage << " mutex release, inform " << mrd->queuedReqs().size() << " processes" << klogger::end();
             //std::list<MutexRequest*> &queuedMutxReqs = mrd->queuedReqs();
             while (! mrd->queuedReqs().empty()) {
                 MutexRequest *mutReq = mrd->queuedReqs().front();
@@ -186,6 +189,7 @@ void MutexHandler::handleMessage(int srcAddress, AppMessages::MutexMsg *mutexMsg
             if (MutexHandler::Wanted == mrd->state()) {//we indeed wanted it
                 if (mrd->confirmationReceived()) {
                     mrd->setState(MutexHandler::Held);
+                    klogger(klogger::Info) << _dbgMessage << " mutex acquired" << klogger::end();
                 }
             }
             else {//anything else, shouldn't happen
@@ -193,4 +197,9 @@ void MutexHandler::handleMessage(int srcAddress, AppMessages::MutexMsg *mutexMsg
             }
         }
     }
+}
+
+void MutexHandler::setDebuggMessage(const std::string &dbgMsg)
+{
+    _dbgMessage = dbgMsg;
 }

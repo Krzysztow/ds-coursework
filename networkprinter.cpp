@@ -15,7 +15,7 @@ void NetworkPrinter::receive(int srcAddress, uint8_t data[], int size)
     AppMessages::AppMessage *appMsg = (AppMessages::AppMessage*)data;
     if (AppMessages::AppMsgPrint == appMsg->type) {
         std::string message((char*)(appMsg->printMsg.data), appMsg->printMsg.header.dataLength);
-        klogger(klogger::Warnings) << "PRINTER: " << klogger::end();
+        klogger(klogger::Info) << "PRINTER: " << klogger::end();
         std::cout << message << std::endl;
     }
     else if (AppMessages::AppMsgMutex == appMsg->type) {

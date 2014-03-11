@@ -17,7 +17,7 @@ int main(int argc, const char *argv[]) {
     Tests t;
 //    t.test();
 
-    klogger::setVerbosity(klogger::Tests);
+    klogger::setVerbosity(klogger::Normal);
     std::string fileName;
     if (2 == argc)
         fileName = std::string(argv[1]);
@@ -31,31 +31,40 @@ int main(int argc, const char *argv[]) {
 
     DataFileReader reader;
     Operations ops;
+    //read input file
     if (reader.createOperationsFromFile(fileName, &ops)) {
+        //create all processes
         RoundRobinScheduler scheduler;
         RoundRobinMediumDispatcher rrDispatcher;
         ScheduledMediumDispatcher mediumDispatcher(&rrDispatcher);
 
+        //medium dispatcher is also a process to be scheduled
         scheduler.registerObject(&mediumDispatcher);
         MultiProcessesOperations mProcsOptions = ops.operations();
         MultiProcessesOperations::const_iterator mProcsIt = mProcsOptions.begin();
+
+        //create processes according to the configuration in the input file
         for (; mProcsOptions.end() != mProcsIt; ++ mProcsIt) {
             MediumParticipantImpl *medParticipant = new MediumParticipantImpl(mProcsIt->first, &rrDispatcher);
             ProcessObject *process = new ProcessObject(medParticipant, mProcsOptions.size(), mProcsIt->first);
+            //build execution plan for each process
             process->buildPlan(&(mProcsIt->second));
 
             rrDispatcher.registerParticipant(medParticipant);
             scheduler.registerObject(process);
         }
 
+        //add network printer
         MediumParticipantImpl printerParticipant(255, &rrDispatcher);
         NetworkPrinter printer(&printerParticipant);
 
+        //start  simulation
         scheduler.exec();
-        //could make clean-up
+
+        //todo: clean-up
     }
     else {
-        klogger(klogger::Errors) << "Cannot parse the file " << fileName;
+        std::cerr << "Cannot parse the file " << fileName << std::endl;
     }
 
     return 0;

@@ -3,6 +3,10 @@
 
 class ScheduledObject;
 
+/**
+ * @brief The Scheduler class - interface for a scheduler (for more information, see RoundRobinScheduler).
+ */
+
 class Scheduler {
 public:
     virtual void registerObject(ScheduledObject *object) = 0;

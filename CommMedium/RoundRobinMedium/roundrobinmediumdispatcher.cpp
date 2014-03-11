@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "klogger.h"
 #include "mediumparticipantimpl.h"
 #include "mediummessage.h"
 
@@ -23,6 +24,7 @@ void RoundRobinMediumDispatcher::_receiveMesage(MediumParticipantImpl *participa
 
 MediumDispatcher::DispatchedMessagesResult RoundRobinMediumDispatcher::dispatchMessages()
 {
+    klogger(klogger::Info) << "-- Dispatcher loop starts" << klogger::end();
     std::map<int, ParticipantData*>::iterator currentParticipantIt;
 
     currentParticipantIt = _participants.begin();
@@ -61,6 +63,7 @@ MediumDispatcher::DispatchedMessagesResult RoundRobinMediumDispatcher::dispatchM
         }
     }
 
+    klogger(klogger::Info) << "-- Dispatcher loop ends" << klogger::end();
     return (moreMessagesToSend ? MD_NotDone : MD_NoMoreMessages);
 }
 

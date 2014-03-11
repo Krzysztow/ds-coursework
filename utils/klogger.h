@@ -12,14 +12,14 @@ public:
 
 public:
     enum Verbosity {
-        Always,
+        Normal,
         Errors,
         Warnings,
         Info,
         Tests
     };
 
-    klogger(Verbosity verb = Always);
+    klogger(Verbosity verb = Normal);
 
     template <class T>
     klogger &operator<<(const T &t) {
@@ -28,13 +28,15 @@ public:
         return *this;
     }
 
+    std::string verbosityPrefix();
+
     klogger &operator<<(const klogger::end &end) {
         (void)end;
         if (_verb <= _globalVerb) {
             if (Errors == _verb)
-                std::cerr << _stream.str() << std::endl;
+                std::cerr << verbosityPrefix() << _stream.str() << std::endl;
             else
-                std::cout << _stream.str() << std::endl;
+                std::cout << verbosityPrefix() << _stream.str() << std::endl;
         }
         return *this;
     }
