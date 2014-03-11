@@ -65,7 +65,7 @@ public:
     }
 
     virtual void receive(int srcAddress, uint8_t data[], int size) {
-        assert(strlen((char*)data) == size);
+        assert(strlen((char*)data) == (unsigned int)size);
         klogger(klogger::Tests) << "RCVD: " <<  data <<  "from " << srcAddress << klogger::end();
         --(*_totalMessagesPtr);
     }

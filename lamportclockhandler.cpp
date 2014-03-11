@@ -12,7 +12,7 @@ LamportClockHandler::LamportClockHandler(LamportClock *clock):
 
 int LamportClockHandler::appendClockToMsg(uint8_t *message, int currentSize, int maxSize)
 {
-    if (maxSize - currentSize < sizeof(LamportClock::LamportClockType)) {
+    if (maxSize - currentSize < (int)sizeof(LamportClock::LamportClockType)) {
         assert(false);
         return -1;
     }
@@ -26,7 +26,7 @@ int LamportClockHandler::appendClockToMsg(uint8_t *message, int currentSize, int
 
 int LamportClockHandler::removeClockFromMsg(uint8_t *msg, int currentSize, LamportClock::LamportClockType *msgClock)
 {
-    if (currentSize < sizeof(LamportClock::LamportClockType)) {
+    if ((unsigned int)currentSize < sizeof(LamportClock::LamportClockType)) {
         assert(false);
         return -1;
     }

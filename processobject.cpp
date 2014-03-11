@@ -434,7 +434,7 @@ ReceivedMessageData *ProcessObjectPrivate::_takeReceivedMessage(unsigned int src
     std::list<ReceivedMessageData*>::iterator msgsIt = rcvdMessages.begin();
     //iterate over a list of up-to-now received messages and look for a one with matching sender id
     for (; rcvdMessages.end() != msgsIt; ++msgsIt) {
-        if ((*msgsIt)->src == srcProcessId) {
+        if (((unsigned int)(*msgsIt)->src) == srcProcessId) {
             //found, remove from the list and return pointer to message
             ReceivedMessageData *msgData = (*msgsIt);
             rcvdMessages.erase(msgsIt);
