@@ -29,8 +29,6 @@ int main(int argc, const char *argv[]) {
     std::string fileName;
     if (2 == argc)
         fileName = std::string(argv[1]);
-    else if (1 == argc)
-        fileName = std::string("../ds-assignment/tests/operations.txt");
     else {
         std::cout << "Usage: ";
         std::cout << argv[0] << " <operations-file>" << std::endl;
