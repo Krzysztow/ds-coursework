@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <time.h>
+#include <unistd.h>
 
 #include "scheduledobject.h"
 
@@ -58,6 +59,8 @@ int RoundRobinScheduler::exec()
         }
 
         it = _objects.begin();
+
+        usleep(10000);
     }
 
     return 0;

@@ -1,0 +1,8 @@
+begin process p1
+  send p2 aaaa
+  send p2 bbbb
+end process
+begin process p2
+  recv p1 bbbb
+  recv p1 aaaa
+end process

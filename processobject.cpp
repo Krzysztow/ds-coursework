@@ -14,6 +14,47 @@
 static const int PrinterMutexResourceIdentifier = 0;
 static const int PrinterMediumAddress = 255;
 
+class ReceivedMessageData;
+class OperationAction;
+class MutexMediumParticipant;
+
+class SendOperationAction;
+class RecvOpeartionAction;
+class AcquireMutexAction;
+class ReleaseMutexAction;
+class PrintOperationAction;
+
+class ProcessObjectPrivate {
+public:
+    ProcessObjectPrivate(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId);
+    ~ProcessObjectPrivate();
+
+    void _buildPlan(const std::list<Operation *> *operations);
+    int _sendTo(uint8_t *data, int size, int destAddress);
+    int _send(uint8_t *data, int size);
+    void _receive(int srcAddress, AppMessages::AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock);
+    ReceivedMessageData *_takeReceivedMessage(unsigned int srcProcessId);
+
+    bool doAction(SendOperationAction *action);
+    bool doAction(RecvOpeartionAction *action);
+    bool doAction(AcquireMutexAction *action);
+    bool doAction(ReleaseMutexAction *action);
+    bool doAction(PrintOperationAction *action);
+
+public:
+    MediumParticipant *medAccess;
+
+    std::list<OperationAction *> opPlan;
+    std::list<ReceivedMessageData*> rcvdMessages;
+
+    MutexMediumParticipant *mutexMedAccess;
+    friend class MutexMediumParticipant;
+    MutexHandler mutexHndlr;
+
+    LamportClock clock;
+    LamportClockHandler clockHandler;
+};
+
 class ReceivedMessageData {
 public:
     ReceivedMessageData(int srcAddress, AppMessages::TransmissionMsg *transMsg, int size):
@@ -38,130 +79,57 @@ public:
 
 class OperationAction {
 public:
-    OperationAction()
-    {}
-
     virtual ~OperationAction() {}
-
-    virtual bool doAction(ProcessObject *procObj) = 0;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) = 0;
 };
 
 class SendOperationAction:
         public OperationAction {
 public:
     SendOperationAction(SendOrRecvOperation *op):
-        _op(op) {
-        assert(Operation::OT_Send == _op->type());
+        operation(op) {
+        assert(Operation::OT_Send == operation->type());
     }
 
-    virtual bool doAction(ProcessObject *procObj) {
-        AppMessages::TransmissionMsg transMsg;
-        transMsg.header.type = AppMessages::AppMsgTrans;
-        transMsg.header.dataLength = _op->message().size();
-        if (transMsg.header.dataLength <= APP_MSG_MAX_DATA_LENGTH) {
-            memcpy(transMsg.data, _op->message().c_str(), transMsg.header.dataLength);
-            klogger() << "sent p" << procObj->_medAccess->mediumAddress() << " " << _op->message() << " p" << _op->destOrSrcProcId() << " " << procObj->_clock.currValue() << klogger::end();
-            procObj->_sendTo((uint8_t*)&transMsg, sizeof(transMsg.header) + transMsg.header.dataLength, _op->destOrSrcProcId());
-        }
-        else {
-            klogger(klogger::Errors) << "Send operation error, data too long" << klogger::end();
-        }
-
-        //we're done, let it be deleted
-        return true;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) {
+        return procObjPriv->doAction(this);
     }
 
-private:
-    SendOrRecvOperation *_op;
+public:
+    SendOrRecvOperation *operation;
 };
 
 class RecvOpeartionAction:
         public OperationAction {
 public:
     RecvOpeartionAction(SendOrRecvOperation *op):
-        _op(op) {
-        assert(Operation::OT_Recv == _op->type());
+        operation(op) {
+        assert(Operation::OT_Recv == operation->type());
     }
 
-    virtual bool doAction(ProcessObject *procObj) {
-        if (0 != procObj->_rcvdMessages.size()) {
-            ReceivedMessageData *msgData = procObj->_takeReceivedMessage(_op->destOrSrcProcId());
-            if (0 != msgData) {
-                AppMessages::AppMessage *msg = (AppMessages::AppMessage*)msgData->data;
-                assert(AppMessages::AppMsgTrans == msg->type);
-
-                //we shouldn't send to print the received message
-                std::string message((const char*)msg->printMsg.data, msg->printMsg.header.dataLength);
-                //_opPlan.push_back(new PrintOperationAction(message));
-
-                klogger() << "received p" << procObj->_medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << procObj->_clock.currValue() << klogger::end();
-
-                procObj->_rcvdMessages.pop_front();
-                delete msgData;
-
-                //done, may be deleted
-                return true;
-            }
-            else {
-                //is this even possible for recv to be called in different order than send?
-                klogger(klogger::Errors) << "None message from " << _op->destOrSrcProcId() << " for " << procObj->_medAccess->mediumAddress() << klogger::end();
-            }
-        }
-        else {
-            klogger(klogger::Info) << "Process p" << procObj->_medAccess->mediumAddress() << " waiting for msg from p" << _op->destOrSrcProcId() << klogger::end();
-        }
-
-        return false;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) {
+        return procObjPriv->doAction(this);
     }
 
-private:
-    SendOrRecvOperation *_op;
+public:
+    SendOrRecvOperation *operation;
 };
 
 class AcquireMutexAction:
         public OperationAction
 {
 public:
-    AcquireMutexAction():
-        _state(NotHeld)
-    {}
-
-    virtual bool doAction(ProcessObject *procObj) {
-        if (NotHeld == _state) {
-            procObj->_mutexHndlr.acquire(PrinterMutexResourceIdentifier);
-            _state = Waiting;
-        }
-        else {
-            if (MutexHandler::Held == procObj->_mutexHndlr.state(PrinterMutexResourceIdentifier)) {
-                return true;
-            }
-        }
-        return false;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) {
+        return procObjPriv->doAction(this);
     }
-
-private:
-    enum AcquisitionState {
-        NotHeld,
-        Waiting
-    };
-    AcquisitionState _state;
 };
 
 class ReleaseMutexAction:
         public OperationAction
 {
 public:
-    virtual bool doAction(ProcessObject *procObj) {
-        if (MutexHandler::Held == procObj->_mutexHndlr.state(PrinterMutexResourceIdentifier)) {
-            procObj->_mutexHndlr.release(PrinterMutexResourceIdentifier);
-
-            return true;
-        }
-        else {
-            assert(false);
-        }
-
-        return false;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) {
+        return procObjPriv->doAction(this);
     }
 };
 
@@ -170,46 +138,140 @@ class PrintOperationAction:
 {
 public:
     PrintOperationAction(const std::string &message):
-        _message(message)
+        message(message)
     {}
 
-    virtual bool doAction(ProcessObject *procObj) {
-        //other operation actions are realised with messages, thus clock is updated. Here it's not a case -> do it manually.
-        procObj->_clock.eventOccured();
-        //being here, means we had checked for mutex being held
-        std::stringstream s;
-        s << "printed p" << procObj->_medAccess->mediumAddress() << " " << _message << " " << procObj->_clock.currValue();
-
-        AppMessages::PrintMsg printMsg;
-        printMsg.header.type = AppMessages::AppMsgPrint;
-        //! todo: check if the string is not too long!
-        std::string fullMsg = s.str();
-        printMsg.header.dataLength = fullMsg.copy((char*)printMsg.data, fullMsg.size());
-
-        procObj->_sendTo((uint8_t*)&printMsg, sizeof(AppMessages::PrintMsgHeader) + printMsg.header.dataLength, PrinterMediumAddress);
-
-        return true;
+    virtual bool doAction(ProcessObjectPrivate *procObjPriv) {
+        return procObjPriv->doAction(this);
     }
 
-private:
-    std::string _message;
+public:
+    std::string message;
 };
 
 //-- END OperationAction --
 
+
+bool ProcessObjectPrivate::doAction(SendOperationAction *action) {
+    AppMessages::TransmissionMsg transMsg;
+    transMsg.header.type = AppMessages::AppMsgTrans;
+    transMsg.header.dataLength = action->operation->message().size();
+    if (transMsg.header.dataLength <= APP_MSG_MAX_DATA_LENGTH) {
+        memcpy(transMsg.data, action->operation->message().c_str(), transMsg.header.dataLength);
+        klogger() << "sent p" << medAccess->mediumAddress() << " " << action->operation->message() << " p" << action->operation->destOrSrcProcId() << " " << clock.currValue() << klogger::end();
+        _sendTo((uint8_t*)&transMsg, sizeof(transMsg.header) + transMsg.header.dataLength, action->operation->destOrSrcProcId());
+    }
+    else {
+        klogger(klogger::Errors) << "Send operation error, data too long" << klogger::end();
+    }
+
+    //we're done, let it be deleted
+    return true;
+}
+
+bool ProcessObjectPrivate::doAction(RecvOpeartionAction *action) {
+    if (0 != rcvdMessages.size()) {
+        ReceivedMessageData *msgData = _takeReceivedMessage(action->operation->destOrSrcProcId());
+        if (0 != msgData) {
+            AppMessages::AppMessage *msg = (AppMessages::AppMessage*)msgData->data;
+            assert(AppMessages::AppMsgTrans == msg->type);
+
+            //we shouldn't send to print the received message
+            std::string message((const char*)msg->printMsg.data, msg->printMsg.header.dataLength);
+            //_opPlan.push_back(new PrintOperationAction(message));
+
+            klogger() << "received p" << medAccess->mediumAddress() << " " << message << " p" << msgData->src << " " << clock.currValue() << klogger::end();
+
+            rcvdMessages.pop_front();
+            delete msgData;
+
+            //done, may be deleted
+            return true;
+        }
+        else {
+            //is this even possible for recv to be called in different order than send?
+            klogger(klogger::Errors) << "None message from " << action->operation->destOrSrcProcId() << " for " << medAccess->mediumAddress() << klogger::end();
+        }
+    }
+    else {
+        klogger(klogger::Info) << "Process p" << medAccess->mediumAddress() << " waiting for msg from p" << action->operation->destOrSrcProcId() << klogger::end();
+    }
+
+    return false;
+}
+
+bool ProcessObjectPrivate::doAction(AcquireMutexAction *action) {
+    (void)action;
+    const MutexHandler::MutexState state = mutexHndlr.state(PrinterMutexResourceIdentifier);
+    switch (state) {
+    case (MutexHandler::Released):
+        mutexHndlr.acquire(PrinterMutexResourceIdentifier);
+        break;
+    case (MutexHandler::Wanted):
+        klogger(klogger::Info) << "p" << medAccess->mediumAddress() << " waiting for mutex" << klogger::end();
+        break;
+    case (MutexHandler::Held):
+        return true;
+        break;
+    default:
+        assert(false);
+    }
+
+    return false;
+}
+
+bool ProcessObjectPrivate::doAction(ReleaseMutexAction *action)
+{
+    (void)action;
+    const MutexHandler::MutexState state = mutexHndlr.state(PrinterMutexResourceIdentifier);
+    switch (state) {
+    case (MutexHandler::Released):
+    case (MutexHandler::Wanted):
+        assert(false);
+        break;
+    case (MutexHandler::Held):
+        mutexHndlr.release(PrinterMutexResourceIdentifier);
+        return true;
+        break;
+    default:
+        assert(false);
+    }
+
+    return false;
+}
+
+bool ProcessObjectPrivate::doAction(PrintOperationAction *action)
+{
+    //other operation actions are realised with messages, thus clock is updated. Here it's not a case -> do it manually.
+    clock.eventOccured();
+    std::stringstream s;
+    s << "printed p" << medAccess->mediumAddress() << " " << action->message << " " << clock.currValue();
+
+    //being here, means we we are holding the mutex, so can send message to be printed
+    AppMessages::PrintMsg printMsg;
+    printMsg.header.type = AppMessages::AppMsgPrint;
+    //! todo: check if the string is not too long!
+    std::string fullMsg = s.str();
+    printMsg.header.dataLength = fullMsg.copy((char*)printMsg.data, fullMsg.size());
+
+    _sendTo((uint8_t*)&printMsg, sizeof(AppMessages::PrintMsgHeader) + printMsg.header.dataLength, PrinterMediumAddress);
+
+    return true;
+}
+
 class MutexMediumParticipant:
         public MediumParticipant{
 public:
-    MutexMediumParticipant(ProcessObject *procObj):
-        _procObj(procObj)
+    MutexMediumParticipant(ProcessObjectPrivate *procObjPriv):
+        _procObjPriv(procObjPriv)
     {}
 
     virtual int send(uint8_t data[], int size) {
-        return _procObj->_send(data, size);
+        return _procObjPriv->_send(data, size);
     }
 
     virtual int sendTo(uint8_t data[], int size, int destAddr) {
-        return _procObj->_sendTo(data, size, destAddr);
+        return _procObjPriv->_sendTo(data, size, destAddr);
     }
 
     virtual void registerReceiver(MessageReceiver *receiver) {
@@ -222,35 +284,49 @@ public:
     }
 
 private:
-    ProcessObject *_procObj;
+    ProcessObjectPrivate *_procObjPriv;
 };
 
-ProcessObject::ProcessObject(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId):
-    _medAccess(mediumParticipant),
-    _mutexMedAccess(new MutexMediumParticipant(this)),
-    _mutexHndlr(_mutexMedAccess, procId, totalProcessesNo, &_clock),
-    _clockHandler(&_clock)
+ProcessObjectPrivate::ProcessObjectPrivate(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId):
+        medAccess(mediumParticipant),
+        mutexMedAccess(new MutexMediumParticipant(this)),
+        mutexHndlr(mutexMedAccess, procId, totalProcessesNo, &clock),
+        clockHandler(&clock)
 {
-    _medAccess->registerReceiver(this);
+}
+
+ProcessObjectPrivate::~ProcessObjectPrivate()
+{
+    delete mutexMedAccess;
+}
+
+
+ProcessObject::ProcessObject(MediumParticipant *mediumParticipant, int totalProcessesNo, int procId):
+    _procObjPriv(new ProcessObjectPrivate(mediumParticipant, totalProcessesNo, procId))
+{
+    _procObjPriv->medAccess->registerReceiver(this);
+
+    std::stringstream s;
+    s << "p" << procId;
+    _procName = s.str();
 }
 
 ProcessObject::~ProcessObject()
 {
-    delete _mutexMedAccess;
+    delete _procObjPriv;
 }
 
-void ProcessObject::setOperations(const std::list<Operation *> *operations)
+void ProcessObject::buildPlan(const std::list<Operation *> *operations)
 {
-    _operations = operations;
-    _operIt = _operations->begin();
+    _procObjPriv->_buildPlan(operations);
 }
 
-ReceivedMessageData *ProcessObject::_takeReceivedMessage(unsigned int srcProcessId) {
-    std::list<ReceivedMessageData*>::iterator msgsIt = _rcvdMessages.begin();
-    for (; _rcvdMessages.end() != msgsIt; ++msgsIt) {
+ReceivedMessageData *ProcessObjectPrivate::_takeReceivedMessage(unsigned int srcProcessId) {
+    std::list<ReceivedMessageData*>::iterator msgsIt = rcvdMessages.begin();
+    for (; rcvdMessages.end() != msgsIt; ++msgsIt) {
         if ((*msgsIt)->src == srcProcessId) {
             ReceivedMessageData *msgData = (*msgsIt);
-            _rcvdMessages.erase(msgsIt, msgsIt);
+            rcvdMessages.erase(msgsIt, msgsIt);
             return msgData;
         }
     }
@@ -260,17 +336,13 @@ ReceivedMessageData *ProcessObject::_takeReceivedMessage(unsigned int srcProcess
 
 ScheduledObject::StepResult ProcessObject::execStep()
 {
-    if (0 == _opPlan.size()) {
-        _buildPlan();
-    }
-
-    if (0 == _opPlan.size())
+    if (0 == _procObjPriv->opPlan.size())
         return ScheduledObject::MayFinish;
 
-    OperationAction *action = _opPlan.front();
-    if (action->doAction(this)) {
+    OperationAction *action = _procObjPriv->opPlan.front();
+    if (action->doAction(_procObjPriv)) {
+        _procObjPriv->opPlan.pop_front();
         delete action;
-        _opPlan.pop_front();
     }
 
     return ScheduledObject::NotFinished;
@@ -278,40 +350,40 @@ ScheduledObject::StepResult ProcessObject::execStep()
 
 #include <cstring>
 
-int ProcessObject::_sendTo(uint8_t *data, int size, int destAddress)
+int ProcessObjectPrivate::_sendTo(uint8_t *data, int size, int destAddress)
 {
-    int ret = _clockHandler.appendClockToMsg(data, size, APP_MSG_MAX_DATA_LENGTH);
+    int ret = clockHandler.appendClockToMsg(data, size, APP_MSG_MAX_DATA_LENGTH);
     if (ret < 0) {
         assert(false);
         return -1;
     }
     else {
         size += ret;
-        ret = _medAccess->sendTo(data, size, destAddress);
+        ret = medAccess->sendTo(data, size, destAddress);
 
         return ret;
     }
 }
 
-int ProcessObject::_send(uint8_t *data, int size)
+int ProcessObjectPrivate::_send(uint8_t *data, int size)
 {
-    int ret = _clockHandler.appendClockToMsg(data, size, APP_MSG_MAX_DATA_LENGTH);
+    int ret = clockHandler.appendClockToMsg(data, size, APP_MSG_MAX_DATA_LENGTH);
     if (ret < 0) {
         assert(false);
         return -1;
     }
     else {
         size += ret;
-        ret = _medAccess->send(data, size);
+        ret = medAccess->send(data, size);
         return ret;
     }
 }
 
-void ProcessObject::_receive(int srcAddress, AppMessages::AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock)
+void ProcessObjectPrivate::_receive(int srcAddress, AppMessages::AppMessage *appMsg, int size, LamportClock::LamportClockType msgClock)
 {
     switch (appMsg->type) {
     case (AppMessages::AppMsgTrans): {
-        _rcvdMessages.push_back(new ReceivedMessageData(srcAddress, &(appMsg->transMsg), size));
+        rcvdMessages.push_back(new ReceivedMessageData(srcAddress, &(appMsg->transMsg), size));
     }
         break;
     case (AppMessages::AppMsgPrint): {
@@ -319,7 +391,7 @@ void ProcessObject::_receive(int srcAddress, AppMessages::AppMessage *appMsg, in
     }
         break;
     case (AppMessages::AppMsgMutex): {
-        _mutexHndlr.handleMessage(srcAddress, &(appMsg->mutexMsg), msgClock);
+        mutexHndlr.handleMessage(srcAddress, &(appMsg->mutexMsg), msgClock);
     }
         break;
     default:
@@ -332,65 +404,62 @@ void ProcessObject::receive(int srcAddress, uint8_t data[], int size)
 {
     //lamport clock is piggy-backed to the message
     LamportClock::LamportClockType msgClock;
-    int ret = _clockHandler.removeClockFromMsg(data, size, &msgClock);
+    int ret = _procObjPriv->clockHandler.removeClockFromMsg(data, size, &msgClock);
     if (ret < 0) {
         assert(false);
     }
     else {
         AppMessages::AppMessage *appMsg = (AppMessages::AppMessage*)data;
-        _receive(srcAddress, appMsg, size - ret, msgClock);
+        _procObjPriv->_receive(srcAddress, appMsg, size - ret, msgClock);
     }
 }
 
-void ProcessObject::_buildPlan()
+void ProcessObjectPrivate::_buildPlan(const std::list<Operation *> *operations)
 {
-    assert(0 == _opPlan.size());
-    if (_operations->end() == _operIt)
-        return;
+    assert(0 == opPlan.size());
 
-    Operation *op = *_operIt;
-    ++_operIt;
+    std::list<Operation *>::const_iterator operIt = operations->begin();
 
-    switch (op->type()) {
-    case (Operation::OT_Send): {
-        SendOrRecvOperation *sOp = dynamic_cast<SendOrRecvOperation*>(op);
-        assert(0 != sOp);
-        _opPlan.push_back(new SendOperationAction(sOp));
-    }
-        break;
-    case (Operation::OT_Recv): {
-        SendOrRecvOperation *rOp = dynamic_cast<SendOrRecvOperation*>(op);
-        assert(0 != rOp);
-        _opPlan.push_back(new RecvOpeartionAction(rOp));
-    }
-        break;
-    case (Operation::OT_Print): {//print out of mutex block
-        PrintOperation *pOp = dynamic_cast<PrintOperation*>(op);
-        assert(0 != pOp);
-        _opPlan.push_back(new AcquireMutexAction());
-        _opPlan.push_back(new PrintOperationAction(pOp->message()));
-        _opPlan.push_back(new ReleaseMutexAction());
-    }
-        break;
-    case (Operation::OT_BeginMutex): {
-        _opPlan.push_back(new AcquireMutexAction());
-        op = *_operIt;
-        while (Operation::OT_Print == op->type()) {
+    Operation *op = 0;
+    bool isInsideMutexBlock = false;
+    while (operations->end() != operIt) {
+        op = *operIt;
+        ++operIt;
+
+        switch (op->type()) {
+        case (Operation::OT_Send): {
+            SendOrRecvOperation *sOp = dynamic_cast<SendOrRecvOperation*>(op);
+            assert(0 != sOp);
+            opPlan.push_back(new SendOperationAction(sOp));
+        }
+            break;
+        case (Operation::OT_Recv): {
+            SendOrRecvOperation *rOp = dynamic_cast<SendOrRecvOperation*>(op);
+            assert(0 != rOp);
+            opPlan.push_back(new RecvOpeartionAction(rOp));
+        }
+            break;
+        case (Operation::OT_Print): {//print out of mutex block
             PrintOperation *pOp = dynamic_cast<PrintOperation*>(op);
             assert(0 != pOp);
-            _opPlan.push_back(new PrintOperationAction(pOp->message()));
-            op = *(++_operIt);
+            if (! isInsideMutexBlock)
+                opPlan.push_back(new AcquireMutexAction());
+            opPlan.push_back(new PrintOperationAction(pOp->message()));
+            if (! isInsideMutexBlock)
+                opPlan.push_back(new ReleaseMutexAction());
         }
-        assert(Operation::OT_EndMutex == op->type());
-        ++_operIt;
-        _opPlan.push_back(new ReleaseMutexAction());
-    }
-        break;
-    case (Operation::OT_EndMutex):
-        klogger(klogger::Errors) << "That should never happen!" << klogger::end();
-        assert(false);
-        break;
-    default:
-        assert(false);
+            break;
+        case (Operation::OT_BeginMutex): {
+            opPlan.push_back(new AcquireMutexAction());
+            isInsideMutexBlock = true;
+        }
+            break;
+        case (Operation::OT_EndMutex):
+            opPlan.push_back(new ReleaseMutexAction());
+            isInsideMutexBlock = false;
+            break;
+        default:
+            assert(false);
+        }
     }
 }

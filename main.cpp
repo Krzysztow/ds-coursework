@@ -15,9 +15,9 @@
 
 int main(int argc, const char *argv[]) {
     Tests t;
-    t.test();
+//    t.test();
 
-
+    klogger::setVerbosity(klogger::Tests);
     std::string fileName;
     if (2 == argc)
         fileName = std::string(argv[1]);
@@ -42,7 +42,7 @@ int main(int argc, const char *argv[]) {
         for (; mProcsOptions.end() != mProcsIt; ++ mProcsIt) {
             MediumParticipantImpl *medParticipant = new MediumParticipantImpl(mProcsIt->first, &rrDispatcher);
             ProcessObject *process = new ProcessObject(medParticipant, mProcsOptions.size(), mProcsIt->first);
-            process->setOperations(&(mProcsIt->second));
+            process->buildPlan(&(mProcsIt->second));
 
             rrDispatcher.registerParticipant(medParticipant);
             scheduler.registerObject(process);

@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "applicationmessages.h"
+#include "klogger.h"
 
 class MutexRequest {
 public:
@@ -107,6 +108,7 @@ void MutexHandler::release(int resourceId)
         if (Held == mrd->state()) {
             _mutexesData.erase(mdIt);
 
+            klogger(klogger::Info) << "releasing mutex - informing " << mrd->queuedReqs().size() << " processes" << klogger::end();
             //std::list<MutexRequest*> &queuedMutxReqs = mrd->queuedReqs();
             while (! mrd->queuedReqs().empty()) {
                 MutexRequest *mutReq = mrd->queuedReqs().front();
