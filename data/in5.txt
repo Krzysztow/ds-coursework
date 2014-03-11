@@ -1,0 +1,8 @@
+begin process p1
+print p1_aaaa
+print p1_bbbb
+end process
+begin process p2
+print p2_xxxx
+print p2_yyyy
+end process
