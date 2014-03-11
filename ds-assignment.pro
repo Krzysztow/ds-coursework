@@ -33,7 +33,7 @@ SOURCES += \
     networkprinter.cpp
 
 HEADERS += \
-    mediumparticipant.h \
+    CommMedium/mediumparticipant.h \
     tests/rrschedulertester.h \
     CommMedium/mediummessage.h \
     CommMedium/RoundRobinMedium/roundrobinmediumdispatcher.h \
