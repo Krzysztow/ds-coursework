@@ -1,8 +1,8 @@
 import collections
 
+
 class Graph:
     def __init__(self):
-        print "Graph inited"
         self._nodes = collections.OrderedDict()
 
     def getOrCreateNode(self, nodeId):
@@ -13,6 +13,7 @@ class Graph:
     def getNodes(self):
         return self._nodes
 
+
 class GraphNode:
     def __init__(self, nodeId):
         self._nodeId = nodeId
@@ -21,14 +22,14 @@ class GraphNode:
         self._tag = None
 
     def setTag(self, tagData):
-        self._tag = tagData;
+        self._tag = tagData
 
         self._lastRunDistance = None
         self._thisRunDistance = None
         self._lastShortPathSrc = None
 
     def getTag(self):
-        return self._tag;
+        return self._tag
 
     def connectTo(self, other, distance):
         if (other in self._connectedNodes):
@@ -42,46 +43,77 @@ class GraphNode:
     def nodeId(self):
         return self._nodeId
 
+
 class BFAlgorithm:
     def __init__(self, graph):
-        self._graph = graph;
+        self._graph = graph
+        self._debug = False
 
-    def runBelmanFord(self, rootNodeId):
+    def setNodesTagData(self, rootNode):
         for nodeId, node in self._graph.getNodes().iteritems():
             node.setTag(BFData(node))
 
-    	firstNode = self._graph.getNodes()[rootNodeId];
-
         for nodeId, node in self._graph.getNodes().iteritems():
-            node.getTag().beginAlg(firstNode)
+            node.getTag().beginAlg(rootNode)
 
-        self.printHeaders(firstNode)
-        self.printValues()
+    def nodes(self):
+        return self._graph.getNodes();
+
+    def createResult(self):
+        res = dict();
+        for nodeId, node in self.nodes().iteritems():
+            bfData = node.getTag()
+            res[nodeId] = (bfData._lastRunDistance, bfData._lastRunPath)
+
+        return res
+
+    def runBelmanFord(self, rootNodeId):
+    	rootNode = self.nodes()[rootNodeId]
+
+        self.setNodesTagData(rootNode)
+
+        if (self._debug):
+            self.printHeaders(rootNode)
+            self.printValues()
+
         for k in xrange(0, len(self._graph.getNodes())):
-            for nodeId, node in self._graph.getNodes().iteritems():
+            for nodeId, node in self.nodes().iteritems():
                 node.getTag().propagateDistance()
-            for nodeId, node in self._graph.getNodes().iteritems():
+            for nodeId, node in self.nodes().iteritems():
                 node.getTag().finishRun()
-            self.printValues();
+            if (self._debug):
+                self.printValues()
+
+        if (self._debug):
+            self.printPaths()
+
+        #TODO: delete tag data along with creating results
+        return self.createResult()
 
     def printHeaders(self, refNode):
         hdrs = ""
-        for nodeId, node in self._graph.getNodes().iteritems():
+        for nodeId, node in self.nodes().iteritems():
             hdrs += "\t{0}".format(nodeId)
         print "Distance from {0} to...".format(refNode.nodeId())
         print hdrs
 
     def printValues(self):
         s = ""
-        for nodeId, node in self._graph.getNodes().iteritems():
+        for nodeId, node in self.nodes().iteritems():
             s += "\t{0}".format(node.getTag().getLastDistance())
         print s
+
+    def printPaths(self):
+        for nodeId, node in self.nodes().iteritems():
+            print node.getTag()._lastRunPath
 
 class BFData:
     def __init__(self, ownerNode):
         self._node = ownerNode
         self._lastRunDistance = None
+        self._lastRunPath = None
         self._thisRunDistance = None
+        self._thisRunPath = None
         self._lastShortPathSrc = None
 
     def beginAlg(self, destNode):
@@ -92,18 +124,24 @@ class BFData:
             self._lastRunDistance = None;
         self._thisRunDistance = self._lastRunDistance
 
+        self._lastRunPath = self._node.nodeId()
+        self._thisRunPath = self._lastRunPath
+
     def finishRun(self):
         self._lastRunDistance = self._thisRunDistance
+        self._lastRunPath = self._thisRunPath + "->" + self._node.nodeId()
 
     def updateDistance(self, fromData, distance):
         assert(not distance is None)
         if (None == self._thisRunDistance):
             self._thisRunDistance = distance
             self._lastShortPathSrc = fromData._node
+            self._thisRunPath = fromData._lastRunPath
         else:
             if (self._thisRunDistance > distance):
                 self._thisRunDistance = distance
                 self._lastShortPathSrc = fromData._node
+                self._thisRunPath = fromData._lastRunPath
 
     def propagateDistance(self):
         if (self._lastRunDistance is None):
@@ -117,9 +155,9 @@ class BFData:
     def getLastDistance(self):
         return self._lastRunDistance;
 
-
-
 import sys
+
+
 if (3 != len(sys.argv)):
     print "Usage: {0} <file-path> root".format(sys.argv[0])
     sys.exit(1)
@@ -134,4 +172,7 @@ for line in f:
     node.connectTo(outNode, int(tokens[2]))
 
 alg = BFAlgorithm(graph)
-alg.runBelmanFord(sys.argv[2])
+res = alg.runBelmanFord(sys.argv[2])
+
+for resNodeId, resTuple in res.iteritems():
+    print "from {0} to {1} dist = {2} : {3}".format(sys.argv[2], resNodeId, resTuple[0], resTuple[1])
