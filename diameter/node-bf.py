@@ -153,26 +153,51 @@ class BFData:
                 node.getTag().updateDistance(self, self._lastRunDistance + weight)
 
     def getLastDistance(self):
-        return self._lastRunDistance;
+        return self._lastRunDistance
+
+def createGraphFromFile(filePath):
+    graph = Graph();
+    f = open(sys.argv[1])
+    for line in f:
+        tokens = line.split()
+        assert(3 == len(tokens))
+        node = graph.getOrCreateNode(tokens[0])
+        outNode = graph.getOrCreateNode(tokens[1])
+        node.connectTo(outNode, int(tokens[2]))
+    return graph
 
 import sys
-
 
 if (3 != len(sys.argv)):
     print "Usage: {0} <file-path> root".format(sys.argv[0])
     sys.exit(1)
 
-graph = Graph();
-f = open(sys.argv[1]);
-for line in f:
-    tokens = line.split()
-    assert(3 == len(tokens))
-    node = graph.getOrCreateNode(tokens[0])
-    outNode = graph.getOrCreateNode(tokens[1])
-    node.connectTo(outNode, int(tokens[2]))
-
+graph = createGraphFromFile(sys.argv[1])
 alg = BFAlgorithm(graph)
-res = alg.runBelmanFord(sys.argv[2])
 
-for resNodeId, resTuple in res.iteritems():
-    print "from {0} to {1} dist = {2} : {3}".format(sys.argv[2], resNodeId, resTuple[0], resTuple[1])
+longestPaths = dict();
+for nodeId, node in graph.getNodes().iteritems():
+    print "-- Runnig BF for " + nodeId + " --"
+    res = alg.runBelmanFord(nodeId)
+
+    for resNodeId, resTuple in res.iteritems():
+        print "from {0} to {1} dist={2} : {3}".format(nodeId, resNodeId, resTuple[0], resTuple[1])
+
+    #find the longest path for given root
+    longstResTuple = res.iteritems().next()[1];
+    for resNodeId, resTuple in res.iteritems():
+        if (longstResTuple[0] < resTuple[0]):
+            longstResTuple = resTuple
+    longestPaths[nodeId] = longstResTuple
+    print "LONGEST: dist: {0} path: {1}".format(longstResTuple[0], longstResTuple[1])
+
+#find max for the longest path globally - diameter
+#NOTE: I could have done it at once, but it serves my debugging purposes
+diameter = longestPaths.iteritems().next()[1]
+for rootNodeId, resTuple in longestPaths.iteritems():
+    if (diameter[0] < resTuple[0]):
+        diameter = resTuple
+
+print "=========================================================="
+print "DIAMETER: D={0} ({1}).".format(diameter[0], diameter[1])
+
