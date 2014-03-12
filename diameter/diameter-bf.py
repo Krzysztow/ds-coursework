@@ -177,7 +177,6 @@ alg = BFAlgorithm(graph)
 
 longestPaths = dict();
 for nodeId, node in graph.getNodes().iteritems():
-    print "-- Runnig BF for " + nodeId + " --"
     res = alg.runBelmanFord(nodeId)
 
     #for resNodeId, resTuple in res.iteritems():
@@ -189,7 +188,7 @@ for nodeId, node in graph.getNodes().iteritems():
         if (longstResTuple[0] < resTuple[0]):
             longstResTuple = resTuple
     longestPaths[nodeId] = longstResTuple
-    print "LONGEST: dist: {0} path: {1}".format(longstResTuple[0], longstResTuple[1])
+    print "LONGEST: for tree with root at {2}  dist: {0} path: {1}".format(longstResTuple[0], longstResTuple[1], nodeId)
 
 #find max for the longest path globally - diameter
 #NOTE: I could have done it at once, but it serves my debugging purposes
