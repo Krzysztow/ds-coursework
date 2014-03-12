@@ -1,10 +1,10 @@
-e a 0
-a e 0
-a c 1
 a b 2
+a c 1
+b d 2
+a e 0
+e a 0
 b a 2
 b c 2
-b d 2
 c a 1
 c f 1
 c g 3

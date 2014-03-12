@@ -168,8 +168,8 @@ def createGraphFromFile(filePath):
 
 import sys
 
-if (3 != len(sys.argv)):
-    print "Usage: {0} <file-path> root".format(sys.argv[0])
+if (2 != len(sys.argv)):
+    print "Usage: {0} <file-path>".format(sys.argv[0])
     sys.exit(1)
 
 graph = createGraphFromFile(sys.argv[1])
@@ -180,8 +180,8 @@ for nodeId, node in graph.getNodes().iteritems():
     print "-- Runnig BF for " + nodeId + " --"
     res = alg.runBelmanFord(nodeId)
 
-    for resNodeId, resTuple in res.iteritems():
-        print "from {0} to {1} dist={2} : {3}".format(nodeId, resNodeId, resTuple[0], resTuple[1])
+    #for resNodeId, resTuple in res.iteritems():
+    #    print "from {0} to {1} dist={2} : {3}".format(nodeId, resNodeId, resTuple[0], resTuple[1])
 
     #find the longest path for given root
     longstResTuple = res.iteritems().next()[1];
