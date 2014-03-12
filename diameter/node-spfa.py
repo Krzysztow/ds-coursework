@@ -11,14 +11,15 @@ class Graph:
     def getNodes(self):
         return self._nodes
 
-    def runBelmanFord(self, nodeId):
-        firstNode = self._nodes[nodeId]
+    def runBelmanFord(self):
+        firstNodeTuple = self._nodes.iteritems().next()
+        firstNode = firstNodeTuple[1]
         hdrs = ""
         for nodeId, node in self._nodes.iteritems():
             hdrs += "\t{0}".format(nodeId)
         print "Distance from {0} to...".format(firstNode.nodeId())
         print hdrs
-        for k in xrange(0, len(self._nodes) - 1):
+        for k in xrange(0, len(self._nodes)):
             s = ""
             for nodeId, node in self._nodes.iteritems():
                 node.propagateDistance(firstNode)
@@ -86,12 +87,9 @@ class GraphNode:
             return self._distances[destNode]
         return None
 
-def main():
-    gn = GraphNode();
-
 import sys
-if (3 != len(sys.argv)):
-    print "Usage: {0} <file-path> root".format(sys.argv[0])
+if (2 != len(sys.argv)):
+    print "Usage: {0} <file-path>".format(sys.argv[0])
     sys.exit(1)
 
 graph = Graph();
@@ -104,4 +102,4 @@ for line in f:
     node.connectTo(outNode, int(tokens[2]))
     outNode.connectTo(node, int(tokens[2]))
 
-graph.runBelmanFord(sys.argv[2])
+graph.runBelmanFord()
