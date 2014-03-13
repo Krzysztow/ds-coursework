@@ -31,4 +31,12 @@ Notes:
     permissions for requesters and number of mutex participants would have to be increased). This printer is a shared resource 
     that processes request for.
 
-    
+Coursework question 4:
+	Calculation of diameter is realised with a script ./diameter/node-bf.py
+
+	Usage:
+		python ./diameter-bf.py <graph-desc-file>
+	e.g.:
+		python ./diameter-bf.py nodes.txt 	
+
+	The input files describing graph in question 4 are:	nodes.txt and nodes-unweighted.txt .
