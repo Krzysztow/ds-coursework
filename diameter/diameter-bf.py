@@ -183,20 +183,33 @@ for nodeId, node in graph.getNodes().iteritems():
     #    print "from {0} to {1} dist={2} : {3}".format(nodeId, resNodeId, resTuple[0], resTuple[1])
 
     #find the longest path for given root
-    longstResTuple = res.iteritems().next()[1];
+    longstResTuples = [res.iteritems().next()[1]];
+    longstResDistance = longstResTuples[0][0];
     for resNodeId, resTuple in res.iteritems():
-        if (longstResTuple[0] < resTuple[0]):
-            longstResTuple = resTuple
-    longestPaths[nodeId] = longstResTuple
-    print "LONGEST: for tree with root at {2}  dist: {0} path: {1}".format(longstResTuple[0], longstResTuple[1], nodeId)
+        if (longstResDistance < resTuple[0]):
+            longstResTuples = [resTuple]
+            longstResDistance = resTuple[0]
+        elif (longstResDistance == resTuple[0]):
+            longstResTuples.append(resTuple)
+
+    i = 0;
+    for longTuple in longstResTuples:
+        longestPaths[nodeId + str(i)] = longTuple
+        print "LONGEST: for tree with root at {2}  dist: {0} path: {1}".format(longTuple[0], longTuple[1], nodeId)
 
 #find max for the longest path globally - diameter
 #NOTE: I could have done it at once, but it serves my debugging purposes
-diameter = longestPaths.iteritems().next()[1]
+diameterItems = [longestPaths.iteritems().next()[1]]
+diameter = diameterItems[0][0]
 for rootNodeId, resTuple in longestPaths.iteritems():
-    if (diameter[0] < resTuple[0]):
-        diameter = resTuple
+    if (diameter < resTuple[0]):
+        diameterItems = [resTuple]
+        diameter = resTuple[0]
+    elif (diameter == resTuple[0]):
+        diameterItems.append(resTuple)
 
 print "=========================================================="
-print "DIAMETER: D={0} ({1}).".format(diameter[0], diameter[1])
+print "DIAMETER: D={0} for paths:".format(diameter)
+for dItem in diameterItems:
+    print "\t{0}.".format(dItem[1])
 

@@ -64,7 +64,7 @@ int RoundRobinScheduler::exec()
         it = _objects.begin();
 
         klogger(klogger::Info) << "- Scheduler loop ends" << klogger::end();
-        usleep(10000);
+        //usleep(10000);
     }
 
     return 0;

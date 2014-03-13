@@ -106,6 +106,13 @@ public:
      */
     bool doAction(PrintOperationAction *action);
 
+    /**
+     * @brief isNewAction checks if the action was last one. Once returned true, the action is set as a last action.
+     * @param action
+     * @return true is hasn't been seen before.
+     */
+    bool isNewAction(OperationAction *action);
+
 public:
     /**
      * @brief medAccess - pointer to medium to send messages to.
@@ -141,6 +148,8 @@ public:
      * @brief dbgMessage - klogger() messages prefix.
      */
     std::string dbgMessage;
+
+    OperationAction *_lastExecdOperation;
 };
 
 
@@ -338,7 +347,7 @@ bool ProcessObjectPrivate::doAction(PrintOperationAction *action)
     //being here, means we we are holding the mutex, so can send message to be printed
 
     //other operation actions are realised with messages, thus clock is updated. Here it's not a case -> do it manually.
-    clock.eventOccured();
+    //clock.eventOccured();
 
     //we are going to send a message to the network printer, construct its content
     std::stringstream s;
@@ -353,6 +362,15 @@ bool ProcessObjectPrivate::doAction(PrintOperationAction *action)
 
     _sendTo((uint8_t*)&printMsg, sizeof(AppMessages::PrintMsgHeader) + printMsg.header.dataLength, PrinterMediumAddress);
 
+    return true;
+}
+
+bool ProcessObjectPrivate::isNewAction(OperationAction *action)
+{
+    if (action == _lastExecdOperation) {
+        return false;
+    }
+    _lastExecdOperation = action;
     return true;
 }
 
@@ -415,7 +433,8 @@ ProcessObjectPrivate::ProcessObjectPrivate(MediumParticipant *mediumParticipant,
         mutexMedAccess(new MutexMediumParticipant(this)),
         mutexHndlr(mutexMedAccess, procId, totalProcessesNo, &clock),
         clockHandler(&clock),
-        dbgMessage(dbgMsg)
+        dbgMessage(dbgMsg),
+        _lastExecdOperation(0)
 {
 }
 
@@ -453,6 +472,10 @@ ScheduledObject::StepResult ProcessObject::execStep()
 
     //take one action, execyte it and check if it's done
     OperationAction *action = _procObjPriv->opPlan.front();
+    if (_procObjPriv->isNewAction(action)) {
+        _procObjPriv->clock.eventOccured();
+    }
+
     if (action->doAction(_procObjPriv)) {
         //action done, we can fortget about it
         _procObjPriv->opPlan.pop_front();
