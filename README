@@ -1,0 +1,34 @@
+Compliation:
+    1) enter the root directory (where ds-assignment.pro file is)
+    2) execute:
+        qmake && make
+
+Run:
+    ./ds-assignment <input-file-path>
+    e.g.:
+    ./ds-assignment ./data/in1.txt
+
+Notes:
+    - all the processes are implemented as:
+        - MediumParticipant, in order to be able to exchange messages with use of MediumDispatcher;
+        - ScheduledObject, in order to be invoked periodically to execute atomic (non-blocking) action by Scheduler;
+
+    - MediumDispatcher is wrapped around the ScheduleObject descendant, so that it may be invoked periodically with 
+    Scheduler. In every invocation it iterates over its registered MediumDispatcher objects and tries to pop the oldest message
+    the process has transmitted. If such a message exists, it dispatches it to the destination process (could be unicast or broadcast).
+    It's a fair 'network access', similar to one for network cards - they have internal buffer and arbitrate for network access.
+    
+    - Lamport clocks are:
+        - incremented whenever there is a new input file event to be executed (plus additional mutex acquire/release around separate print
+        statements). This is done in ScheduledObject::StepResult ProcessObject::execStep() (procesobject.cpp:467)
+        - incremented for each send message in ProcessObjectPrivate::_sendTo() (processobject.cpp:490) and ProcessObjectPrivate::_send() 
+        (processobject.cpp:506), when LamportClockHandler::appendClockToMsg() (lamportclockhandler:14) is invoked.
+        - synchronized and incremented, when new message is received in ProcessObject::receive() (processobject.cpp:545) method
+        when invoking LamportClockHandler::removeClockFromMsg().
+                
+    - additionally, there is a NetworkPrinter added, inheriting from MediumParticipant as well. It doesn't take part in mutex acquisition
+    (because I assumed only processes that are interested in mutex do that, it's easy to include it - printer would always grant 
+    permissions for requesters and number of mutex participants would have to be increased). This printer is a shared resource 
+    that processes request for.
+
+    
